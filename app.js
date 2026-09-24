@@ -77,18 +77,54 @@ function startBattle(){
   ratings=new Map(candidates.map(c=>[c.id,1500]));
   battles=[];history=[];b=0;
   const ids=candidates.map(c=>c.id);
-  const targetPairs=Math.floor(ids.length*8/2);
+  const targetPairs=180;
+
+  // 予選結果を本戦の対戦カードに反映する。
+  // 個人が選ばれていることを最優先し、その次に「その人の属する4人組で
+  // 何人選ばれたか」を重視する。選ばれていない人・グループにも登場枠を残す。
+  const selectedSet=new Set(qChoices.flat());
+  const prelimGroupById=new Map();
+  const groupSelectedCount=Array(25).fill(0);
+  qChoices.forEach((chosen,g)=>{
+    groupSelectedCount[g]=chosen.length;
+    chosen.forEach(id=>prelimGroupById.set(id,g));
+  });
+  const savedGroupMap=new Map();
+  if(prelimGroups){
+    prelimGroups.forEach((group,g)=>group.forEach(id=>savedGroupMap.set(id,g)));
+  }
+  const groupOf=id=>savedGroupMap.has(id)?savedGroupMap.get(id):prelimGroupById.get(id);
+
+  // 予選での情報から「出やすさ」を作る。全員に最低限の出番を残す。
+  function baseWeight(id){
+    const selected=selectedSet.has(id);
+    const g=groupOf(id);
+    const gc=(g===undefined)?0:groupSelectedCount[g];
+    return 1 + (selected?3.5:0) + gc*1.0;
+  }
+
   const scheduled=new Map(ids.map(id=>[id,0]));
   const used=new Set();
   const keyOf=(a,z)=>a<z?`${a}-${z}`:`${z}-${a}`;
+
+  function pairScore(a,z){
+    const wa=baseWeight(a), wz=baseWeight(z);
+    // 予選で反応が強かった候補・グループを優先しつつ、
+    // すでに多く登場した候補にはペナルティをかける。
+    const fairnessA=1/(1+scheduled.get(a)*0.8);
+    const fairnessZ=1/(1+scheduled.get(z)*0.8);
+    return wa*fairnessA + wz*fairnessZ + Math.random()*0.25;
+  }
+
   while(battles.length<targetPairs){
-    let best=null,bestScore=Infinity;
+    let best=null,bestScore=-Infinity;
+    // 候補を全探索し、予選情報＋出場回数でカードを選ぶ。
     for(let i=0;i<ids.length;i++){
       for(let j=i+1;j<ids.length;j++){
         const a=ids[i],z=ids[j],key=keyOf(a,z);
         if(used.has(key))continue;
-        const score=scheduled.get(a)+scheduled.get(z)+Math.random()*0.2;
-        if(score<bestScore){best=[a,z];bestScore=score;}
+        const score=pairScore(a,z);
+        if(score>bestScore){best=[a,z];bestScore=score;}
       }
     }
     if(!best)break;
@@ -102,7 +138,6 @@ function startBattle(){
   renderBattle();
   show('battle');
 }
-
 function renderBattle(){
   if(b>=battles.length){finishBattle();return}
   const [a,z]=battles[b];
