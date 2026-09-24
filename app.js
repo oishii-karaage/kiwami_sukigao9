@@ -25,19 +25,18 @@ const prelimGroups = loadPrelimGroups();
 function loadPrelimGroups(){
   try{
     const raw=localStorage.getItem('sukigao9_prelim_groups');
-    if(!raw) return null;
+    if(!raw)return null;
     const x=JSON.parse(raw);
-    if(!Array.isArray(x) || x.length!==25 || x.some(g=>!Array.isArray(g) || g.length!==4)) return null;
+    if(!Array.isArray(x)||x.length!==25||x.some(g=>!Array.isArray(g)||g.length!==4))return null;
     const ids=x.flat();
-    if(ids.length!==100 || new Set(ids).size!==100) return null;
-    const validIds=new Set(candidates.map(c=>c.id));
-    if(ids.some(id=>!validIds.has(id))) return null;
+    if(ids.length!==100||new Set(ids).size!==100)return null;
+    const valid=new Set(candidates.map(c=>c.id));
+    if(ids.some(id=>!valid.has(id)))return null;
     return x;
-  }catch(e){ return null; }
+  }catch(e){return null;}
 }
-
 function getPrelimGroup(n){
-  if(prelimGroups) return prelimGroups[n] || [];
+  if(prelimGroups)return prelimGroups[n];
   return candidates.slice(n*4,n*4+4).map(c=>c.id);
 }
 let battles=[], b=0, ratings=new Map(), history=[];
@@ -52,8 +51,7 @@ function startQual(){
 }
 function renderQual(){
   const ids=getPrelimGroup(q);
-  const group=ids.map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
-  const sel=qChoices[q]||[];
+  const group=ids.map(id=>candidates.find(c=>c.id===id)).filter(Boolean), sel=qChoices[q]||[];
   document.getElementById('qualInfo').textContent=`第${q+1}/25組　選択済み ${qualified.length}人（この組から最大3人）`;
   document.getElementById('qualBar').style.width=`${(q/25)*100}%`;
   document.getElementById('qualGrid').innerHTML=group.map(c=>`
@@ -76,53 +74,35 @@ function qualNext(){
   }else{q++;renderQual()}
 }
 function startBattle(){
-  screen('battle');
-  ratings={};
-  candidates.forEach(c=>ratings[c.id]=1500);
-
-  // All 100 candidates enter the main round.
-  // Aim for about 8 comparisons per person while avoiding duplicate pairs.
-  const targetPerPerson = 8;
-  const targetPairs = Math.floor(candidates.length * targetPerPerson / 2);
-  const ids = candidates.map(c=>c.id);
-  const pairs=[];
+  ratings=new Map(candidates.map(c=>[c.id,1500]));
+  battles=[];history=[];b=0;
+  const ids=candidates.map(c=>c.id);
+  const targetPairs=Math.floor(ids.length*8/2);
+  const scheduled=new Map(ids.map(id=>[id,0]));
   const used=new Set();
-
-  function pairKey(a,b){
-    return a<b ? `${a}|${b}` : `${b}|${a}`;
-  }
-
-  // Prefer candidates with fewer scheduled comparisons, then randomize.
-  const scheduled={};
-  ids.forEach(id=>scheduled[id]=0);
-
-  while(pairs.length < targetPairs){
-    let bestA=null, bestB=null, bestScore=Infinity;
-
+  const keyOf=(a,z)=>a<z?`${a}-${z}`:`${z}-${a}`;
+  while(battles.length<targetPairs){
+    let best=null,bestScore=Infinity;
     for(let i=0;i<ids.length;i++){
       for(let j=i+1;j<ids.length;j++){
-        const a=ids[i], b=ids[j], key=pairKey(a,b);
-        if(used.has(key)) continue;
-        const score=scheduled[a]+scheduled[b]+Math.random()*0.25;
-        if(score<bestScore){
-          bestScore=score;
-          bestA=a; bestB=b;
-        }
+        const a=ids[i],z=ids[j],key=keyOf(a,z);
+        if(used.has(key))continue;
+        const score=scheduled.get(a)+scheduled.get(z)+Math.random()*0.2;
+        if(score<bestScore){best=[a,z];bestScore=score;}
       }
     }
-
-    if(bestA===null) break;
-    used.add(pairKey(bestA,bestB));
-    scheduled[bestA]++;
-    scheduled[bestB]++;
-    pairs.push(Math.random()<0.5 ? [bestA,bestB] : [bestB,bestA]);
+    if(!best)break;
+    const [a,z]=best;
+    used.add(keyOf(a,z));
+    scheduled.set(a,scheduled.get(a)+1);
+    scheduled.set(z,scheduled.get(z)+1);
+    const ca=candidates.find(c=>c.id===a),cz=candidates.find(c=>c.id===z);
+    battles.push(Math.random()<0.5?[ca,cz]:[cz,ca]);
   }
-
-  battlePairs=pairs;
-  b=0;
-  history=[];
   renderBattle();
+  show('battle');
 }
+
 function renderBattle(){
   if(b>=battles.length){finishBattle();return}
   const [a,z]=battles[b];
@@ -149,12 +129,12 @@ function battleBack(){
   if(b===0)return;
   b--;
   history.pop();
-  ratings=new Map(qualified.map(c=>[c.id,1500]));
+  ratings=new Map(candidates.map(c=>[c.id,1500]));
   history.forEach(x=>applyElo(qualified.find(c=>c.id===x.a),qualified.find(c=>c.id===x.z),x.outcome));
   renderBattle();
 }
 function finishBattle(){
-  const ranked=qualified.slice().sort((a,z)=>ratings.get(z.id)-ratings.get(a.id));
+  const ranked=candidates.slice().sort((a,z)=>ratings.get(z.id)-ratings.get(a.id));
   const top=ranked.slice(0,9);
   document.getElementById('top9').innerHTML=top.map((c,i)=>`
     <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
