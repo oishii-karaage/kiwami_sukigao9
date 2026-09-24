@@ -39,194 +39,218 @@ function getPrelimGroup(n){
   if(prelimGroups)return prelimGroups[n];
   return candidates.slice(n*4,n*4+4).map(c=>c.id);
 }
-let battles=[], b=0, ratings=new Map(), history=[];
-let battleStage='explore', stageOneEnd=0, finalists=[];
 
 function show(id){
   document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
 }
 function startQual(){
-  q=0;qChoices=Array.from({length:25},()=>[]);qualified=[];
-  show('qual');renderQual();
+  q=0; qChoices=Array.from({length:25},()=>[]); qualified=[];
+  show('qual'); renderQual();
 }
 function renderQual(){
-  const ids=getPrelimGroup(q);
-  const group=ids.map(id=>candidates.find(c=>c.id===id)).filter(Boolean), sel=qChoices[q]||[];
-  document.getElementById('qualInfo').textContent=`第${q+1}/25組　選択済み ${qualified.length}人（この組から最大3人）`;
-  document.getElementById('qualBar').style.width=`${(q/25)*100}%`;
+  const group=getPrelimGroup(q).map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
+  const sel=qChoices[q]||[];
+  const count=qChoices.flat().length;
+  document.getElementById('qualInfo').textContent=`組 ${q+1} / 25　　　　　　　　　${Math.min(100,q*4)} / 100人`;
+  document.getElementById('qualBar').style.width=`${q*4}%`;
   document.getElementById('qualGrid').innerHTML=group.map(c=>`
     <div class="card ${sel.includes(c.id)?'selected':''}" onclick="toggleQual(${c.id})">
-      <img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div>
+      <img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||'')}</div><div class="name">${escapeHtml(c.name)}</div>
     </div>`).join('');
   document.getElementById('qualBack').disabled=q===0;
 }
 function toggleQual(id){
-  let sel=qChoices[q]; const ix=sel.indexOf(id);
-  if(ix>=0) sel.splice(ix,1); else if(sel.length<3) sel.push(id);
+  const sel=qChoices[q], i=sel.indexOf(id);
+  if(i>=0)sel.splice(i,1);
+  else if(sel.length<3)sel.push(id);
   renderQual();
 }
-function qualBack(){if(q>0){q--;renderQual()}}
+function qualBack(){if(q>0){q--;renderQual();}}
 function qualNext(){
   if(q===24){
     qualified=qChoices.flat().map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
     show('qualDone');
-    document.getElementById('qualDoneText').textContent=`本戦では100人全員が登場します。まず広く比較し、その後「好き」と選んだ人だけで決選投票を行います。`;
-  }else{q++;renderQual()}
+  }else{q++;renderQual();}
 }
 
-function startBattle(){
-  ratings=new Map(candidates.map(c=>[c.id,1500]));
-  battles=[];history=[];b=0;battleStage='explore';stageOneEnd=0;finalists=[];
-  const ids=candidates.map(c=>c.id);
-  const selectedSet=new Set(qChoices.flat());
-  const savedGroupMap=new Map();
-  if(prelimGroups) prelimGroups.forEach((group,g)=>group.forEach(id=>savedGroupMap.set(id,g)));
-  const groupSelectedCount=Array(25).fill(0);
-  qChoices.forEach((chosen,g)=>groupSelectedCount[g]=chosen.length);
-  const groupOf=id=>savedGroupMap.has(id)?savedGroupMap.get(id):Math.floor((id-1)/4);
-  const priority=id=>{
-    const g=groupOf(id), gc=groupSelectedCount[g]||0;
-    return (selectedSet.has(id)?100:0) + gc*20 + ((id*17)%19)/100;
-  };
-  const keyOf=(a,z)=>a<z?`${a}-${z}`:`${z}-${a}`;
+let battles=[], b=0, history=[];
+let score=new Map(), appearances=new Map(), historyLog=[];
+let targetMatches=180, exploreMatches=50;
 
-  // 前半120試合。各候補の出場回数を先に固定するので、ランダムな出現回数で順位が揺れない。
-  // 予選で選ばれた人・選出人数の多いグループをやや多く登場させつつ、全員に最低2試合を保証する。
-  const ordered=ids.slice().sort((a,z)=>priority(z)-priority(a));
-  const appearances=new Map(ids.map(id=>[id,2]));
-  let extra=40;
-  for(const id of ordered){
-    if(extra<=0)break;
-    appearances.set(id,3); extra--;
-  }
-  const remaining=new Map(appearances);
-  const used=new Set();
-  let guard=0;
-  while(battles.length<120 && guard<20000){
-    guard++;
-    let best=null,bestScore=-Infinity;
-    for(let i=0;i<ids.length;i++){
-      const a=ids[i];
-      if((remaining.get(a)||0)<=0)continue;
-      for(let j=i+1;j<ids.length;j++){
-        const z=ids[j];
-        if((remaining.get(z)||0)<=0)continue;
-        const key=keyOf(a,z);
-        if(used.has(key))continue;
-        const score=(priority(a)+priority(z)) + (remaining.get(a)+remaining.get(z))*0.5;
-        if(score>bestScore){best=[a,z];bestScore=score;}
+function initStats(){
+  score=new Map(candidates.map(c=>[c.id,0]));
+  appearances=new Map(candidates.map(c=>[c.id,0]));
+  historyLog=[];
+}
+function groupMap(){
+  const m=new Map();
+  if(prelimGroups){prelimGroups.forEach((g,gi)=>g.forEach(id=>m.set(id,gi)));}
+  else candidates.forEach((c,i)=>m.set(c.id,Math.floor(i/4)));
+  return m;
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function pairKey(a,z){return a<z?`${a}-${z}`:`${z}-${a}`;}
+function selectedData(){
+  const selected=new Set(qChoices.flat());
+  const groupCount=Array(25).fill(0);
+  qChoices.forEach((x,g)=>groupCount[g]=x.length);
+  return {selected,groupCount};
+}
+function candidateValue(id){
+  const a=appearances.get(id)||0;
+  const s=score.get(id)||0;
+  return a ? s/a : 0;
+}
+function deterministicNoise(a,z,step){
+  let x=(a*73856093 ^ z*19349663 ^ step*83492791)>>>0;
+  x=(x^ (x>>>13))>>>0; x=(x*1274126177)>>>0;
+  return (x%1000)/100000;
+}
+function choosePair(stage){
+  const {selected,groupCount}=selectedData();
+  const gm=groupMap();
+  const used=new Set(historyLog.map(x=>pairKey(x.a,x.z)));
+  const ids=candidates.map(c=>c.id);
+  let best=null,bestScore=-Infinity;
+
+  for(let i=0;i<ids.length;i++){
+    const a=ids[i];
+    for(let j=i+1;j<ids.length;j++){
+      const z=ids[j];
+      const key=pairKey(a,z);
+      if(used.has(key))continue;
+      const ga=gm.get(a), gz=gm.get(z);
+      const aa=appearances.get(a)||0, az=appearances.get(z)||0;
+      const va=candidateValue(a), vz=candidateValue(z);
+      let sc=0;
+
+      // 出場回数の偏りを抑える。
+      sc += (4-Math.min(4,aa))*2.2 + (4-Math.min(4,az))*2.2;
+
+      if(stage===1){
+        // 最序盤は探索。予選選出者を少しだけ優先しつつ、同じ予選グループを避ける。
+        sc += (selected.has(a)?0.35:0) + (selected.has(z)?0.35:0);
+        sc += (groupCount[ga]||0)*0.08 + (groupCount[gz]||0)*0.08;
+        if(ga===gz) sc-=8;
+        // まだ出ていない人を強く優先。
+        if(aa===0)sc+=4;if(az===0)sc+=4;
+      }else if(stage===2){
+        // 中盤は、本戦で「好き」を取った候補を徐々に中心へ。
+        sc += (selected.has(a)?0.5:0) + (selected.has(z)?0.5:0);
+        sc += Math.max(0,va)*3 + Math.max(0,vz)*3;
+        sc += (groupCount[ga]||0)*0.35 + (groupCount[gz]||0)*0.35;
+        // 点数が近い候補を比較して順位を精密化。
+        sc += Math.max(0,3-Math.abs(va-vz))*2;
+        if(ga===gz)sc-=2;
+      }else{
+        // 後半は決選投票ではなく、評価が近い・比較不足の候補を精密比較。
+        sc += Math.max(0,5-Math.abs(va-vz))*5;
+        sc += Math.abs(aa-az)*-0.4;
+        sc += Math.max(0,va)+Math.max(0,vz);
       }
+      sc += deterministicNoise(a,z,historyLog.length);
+      if(sc>bestScore){bestScore=sc;best=[a,z];}
     }
-    if(!best)break;
-    const [a,z]=best;
-    used.add(keyOf(a,z));
-    remaining.set(a,remaining.get(a)-1);remaining.set(z,remaining.get(z)-1);
-    battles.push([candidates.find(c=>c.id===a),candidates.find(c=>c.id===z)]);
   }
-  stageOneEnd=battles.length;
+  return best;
+}
+function startBattle(){
+  initStats();
+  battles=[]; b=0;
+  const p=qChoices.flat().length;
+  // 予選の選択人数に応じて比較数を調整。上限を設けて長くなりすぎないようにする。
+  targetMatches=clamp(140 + p*2,150,240);
+  // 最序盤は「発掘」に使う。残りは本戦での評価に応じて出し方を変える。
+  exploreMatches=clamp(35 + Math.round(p*0.6),40,75);
   renderBattle();
   show('battle');
 }
-
+function currentStage(){
+  if(b<exploreMatches)return 1;
+  if(b<Math.floor(targetMatches*0.72))return 2;
+  return 3;
+}
+function nextBattlePair(){
+  const pair=choosePair(currentStage());
+  if(!pair)return null;
+  battles.push(pair.map(id=>candidates.find(c=>c.id===id)));
+  return battles[battles.length-1];
+}
 function renderBattle(){
-  if(b>=battles.length){finishStageOrBattle();return;}
+  if(b>=targetMatches){finishBattle();return;}
+  if(!battles[b]){
+    const pair=nextBattlePair();
+    if(!pair){finishBattle();return;}
+  }
   const [a,z]=battles[b];
-  const label=battleStage==='explore' ? `探索 ${b+1} / ${stageOneEnd}` : `決選 ${b-stageOneEnd+1} / ${battles.length-stageOneEnd}`;
+  const stage=currentStage();
+  const label=stage===1 ? `発掘 ${b+1} / ${exploreMatches}` : stage===2 ? `本戦 ${b+1} / ${targetMatches}` : `順位調整 ${b+1} / ${targetMatches}`;
   document.getElementById('battleInfo').textContent=label;
-  document.getElementById('battleBar').style.width=`${(b/battles.length)*100}%`;
+  document.getElementById('battleBar').style.width=`${(b/targetMatches)*100}%`;
   document.getElementById('duel').innerHTML=[a,z].map(c=>`
     <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
+  document.getElementById('drawArea').innerHTML=`
+    <button class="btn draw" onclick="answer('both')">どっちも好き</button>
+    <button class="btn draw not-like" onclick="answer('neither')">どっちも好きじゃない</button>`;
   document.getElementById('battleBack').disabled=b===0;
 }
-function expected(ra,rb){return 1/(1+10**((rb-ra)/400))}
-function applyElo(a,z,outcome){
-  const K=32,ra=ratings.get(a.id),rz=ratings.get(z.id);
-  const ea=expected(ra,rz),ez=1-ea;
-  let sa=outcome==='a'?1:outcome==='d'?.5:0;
-  ratings.set(a.id,ra+K*(sa-ea));ratings.set(z.id,rz+K*((1-sa)-ez));
+function applyResult(a,z,type){
+  if(type==='win'){
+    score.set(a.id,(score.get(a.id)||0)+2);score.set(z.id,(score.get(z.id)||0)-1);
+  }else if(type==='lose'){
+    score.set(a.id,(score.get(a.id)||0)-1);score.set(z.id,(score.get(z.id)||0)+2);
+  }else if(type==='both'){
+    score.set(a.id,(score.get(a.id)||0)+1);score.set(z.id,(score.get(z.id)||0)+1);
+  }else if(type==='neither'){
+    score.set(a.id,(score.get(a.id)||0)-1);score.set(z.id,(score.get(z.id)||0)-1);
+  }
+  appearances.set(a.id,(appearances.get(a.id)||0)+1);
+  appearances.set(z.id,(appearances.get(z.id)||0)+1);
 }
 function answer(type,id){
   const [a,z]=battles[b];
-  const outcome=type==='draw'?'d':(id===a.id?'a':'b');
-  applyElo(a,z,outcome);history.push({b,outcome,a:a.id,z:z.id});
-  b++;renderBattle();
-}
-function getWinnersFromExplore(){
-  const wins=new Set();
-  history.filter(x=>x.b<stageOneEnd).forEach(x=>{
-    if(x.outcome==='a')wins.add(x.a);
-    else if(x.outcome==='b')wins.add(x.z);
-  });
-  return Array.from(wins);
-}
-function makeFinalStage(){
-  const winners=getWinnersFromExplore();
-  const selectedSet=new Set(qChoices.flat());
-  const winnerRank=winners.slice().sort((a,z)=>{
-    const sa=ratings.get(a)+(selectedSet.has(a)?10:0), sz=ratings.get(z)+(selectedSet.has(z)?10:0);
-    return sz-sa;
-  });
-  // 後半に進むのは、本戦前半で実際に「好き」と選ばれた人だけ。
-  // その中から上位30人を決選投票へ。
-  finalists=winnerRank.slice(0,30).map(id=>candidates.find(c=>c.id===id));
-  if(finalists.length<2){
-    finishBattle();
-    return;
-  }
-  // 決選は30人×4試合＝60試合。各人の比較回数を固定し、重複対戦は作らない。
-  const n=finalists.length;
-  const rounds=Math.min(4,Math.floor((n-1)/2));
-  const finalPairs=[];
-  const used=new Set();
-  for(let r=0;r<rounds;r++){
-    for(let i=0;i<Math.floor(n/2);i++){
-      const a=finalists[(i+r)%n], z=finalists[(n-1-i+r)%n];
-      const key=a.id<z.id?`${a.id}-${z.id}`:`${z.id}-${a.id}`;
-      if(a.id===z.id||used.has(key))continue;
-      used.add(key);finalPairs.push([a,z]);
-    }
-  }
-  // 30人なら60試合。人数が少ない場合でも、可能な範囲で決選を行う。
-  battles=battles.slice(0,stageOneEnd).concat(finalPairs.slice(0,60));
-  battleStage='final';
-  b=stageOneEnd;
+  let t=type;
+  if(type==='win' && id===z.id)t='lose';
+  applyResult(a,z,t);
+  historyLog.push({b,a:a.id,z:z.id,type:t});
+  b++;
   renderBattle();
-}
-function finishStageOrBattle(){
-  if(battleStage==='explore'){
-    makeFinalStage();
-    return;
-  }
-  finishBattle();
 }
 function battleBack(){
   if(b===0)return;
-  // 決選開始地点まで戻った場合は、決選カード生成前の状態に戻す。
   b--;
-  history=history.filter(x=>x.b!==b);
-  ratings=new Map(candidates.map(c=>[c.id,1500]));
-  history.forEach(x=>{
-    const a=candidates.find(c=>c.id===x.a),z=candidates.find(c=>c.id===x.z);
-    if(a&&z)applyElo(a,z,x.outcome);
-  });
-  if(b<stageOneEnd)battleStage='explore';
+  const h=historyLog.pop();
+  if(h){
+    const a=candidates.find(c=>c.id===h.a),z=candidates.find(c=>c.id===h.z);
+    // 結果を逆算して完全に元へ戻す。
+    if(h.type==='win'){score.set(a.id,score.get(a.id)-2);score.set(z.id,score.get(z.id)+1);}
+    else if(h.type==='lose'){score.set(a.id,score.get(a.id)+1);score.set(z.id,score.get(z.id)-2);}
+    else if(h.type==='both'){score.set(a.id,score.get(a.id)-1);score.set(z.id,score.get(z.id)-1);}
+    else if(h.type==='neither'){score.set(a.id,score.get(a.id)+1);score.set(z.id,score.get(z.id)+1);}
+    appearances.set(a.id,appearances.get(a.id)-1);appearances.set(z.id,appearances.get(z.id)-1);
+  }
+  // 戻った時点より後に生成されたペアは捨てる。次のペアは現在の回答状況から再生成する。
+  battles=battles.slice(0,b+1);
   renderBattle();
 }
 function finishBattle(){
-  const ranked=candidates.slice().sort((a,z)=>ratings.get(z.id)-ratings.get(a.id));
+  const ranked=candidates.slice().sort((a,z)=>{
+    const va=candidateValue(a.id), vz=candidateValue(z.id);
+    if(vz!==va)return vz-va;
+    return (score.get(z.id)||0)-(score.get(a.id)||0);
+  });
   const top=ranked.slice(0,9);
   document.getElementById('top9').innerHTML=top.map((c,i)=>`
     <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   document.getElementById('ranking').innerHTML=ranked.map((c,i)=>`
     <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
+  document.querySelector('#result .muted').textContent=`比較回数 ${historyLog.length}回。予選での選択と本戦での評価をもとに、好き度を集計しています。`;
   show('result');
 }
+
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 
-document.getElementById('candidateStatus').textContent =
-  localStorage.getItem('sukigao9_candidates')
-  ? (prelimGroups ? '登録済みの候補者データと予選グループ設定を使用しています。' : '登録済みの候補者データを使用しています。予選グループは登録順です。')
-  : '現在は仮候補100人です。「候補者を管理する」から写真と名前を登録できます。';
