@@ -40,6 +40,7 @@ function getPrelimGroup(n){
   return candidates.slice(n*4,n*4+4).map(c=>c.id);
 }
 let battles=[], b=0, ratings=new Map(), history=[];
+let battleStage='explore', stageOneEnd=0, finalists=[];
 
 function show(id){
   document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
@@ -70,78 +71,69 @@ function qualNext(){
   if(q===24){
     qualified=qChoices.flat().map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
     show('qualDone');
-    document.getElementById('qualDoneText').textContent=`本戦進出者は ${qualified.length}人です。`;
+    document.getElementById('qualDoneText').textContent=`本戦では100人全員が登場します。まず広く比較し、その後「好き」と選んだ人だけで決選投票を行います。`;
   }else{q++;renderQual()}
 }
+
 function startBattle(){
   ratings=new Map(candidates.map(c=>[c.id,1500]));
-  battles=[];history=[];b=0;
+  battles=[];history=[];b=0;battleStage='explore';stageOneEnd=0;finalists=[];
   const ids=candidates.map(c=>c.id);
-  const targetPairs=180;
-
-  // 予選結果を本戦の対戦カードに反映する。
-  // 個人が選ばれていることを最優先し、その次に「その人の属する4人組で
-  // 何人選ばれたか」を重視する。選ばれていない人・グループにも登場枠を残す。
   const selectedSet=new Set(qChoices.flat());
-  const prelimGroupById=new Map();
-  const groupSelectedCount=Array(25).fill(0);
-  qChoices.forEach((chosen,g)=>{
-    groupSelectedCount[g]=chosen.length;
-    chosen.forEach(id=>prelimGroupById.set(id,g));
-  });
   const savedGroupMap=new Map();
-  if(prelimGroups){
-    prelimGroups.forEach((group,g)=>group.forEach(id=>savedGroupMap.set(id,g)));
-  }
-  const groupOf=id=>savedGroupMap.has(id)?savedGroupMap.get(id):prelimGroupById.get(id);
-
-  // 予選での情報から「出やすさ」を作る。全員に最低限の出番を残す。
-  function baseWeight(id){
-    const selected=selectedSet.has(id);
-    const g=groupOf(id);
-    const gc=(g===undefined)?0:groupSelectedCount[g];
-    return 1 + (selected?3.5:0) + gc*1.0;
-  }
-
-  const scheduled=new Map(ids.map(id=>[id,0]));
-  const used=new Set();
+  if(prelimGroups) prelimGroups.forEach((group,g)=>group.forEach(id=>savedGroupMap.set(id,g)));
+  const groupSelectedCount=Array(25).fill(0);
+  qChoices.forEach((chosen,g)=>groupSelectedCount[g]=chosen.length);
+  const groupOf=id=>savedGroupMap.has(id)?savedGroupMap.get(id):Math.floor((id-1)/4);
+  const priority=id=>{
+    const g=groupOf(id), gc=groupSelectedCount[g]||0;
+    return (selectedSet.has(id)?100:0) + gc*20 + ((id*17)%19)/100;
+  };
   const keyOf=(a,z)=>a<z?`${a}-${z}`:`${z}-${a}`;
 
-  function pairScore(a,z){
-    const wa=baseWeight(a), wz=baseWeight(z);
-    // 予選で反応が強かった候補・グループを優先しつつ、
-    // すでに多く登場した候補にはペナルティをかける。
-    const fairnessA=1/(1+scheduled.get(a)*0.8);
-    const fairnessZ=1/(1+scheduled.get(z)*0.8);
-    return wa*fairnessA + wz*fairnessZ + Math.random()*0.25;
+  // 前半120試合。各候補の出場回数を先に固定するので、ランダムな出現回数で順位が揺れない。
+  // 予選で選ばれた人・選出人数の多いグループをやや多く登場させつつ、全員に最低2試合を保証する。
+  const ordered=ids.slice().sort((a,z)=>priority(z)-priority(a));
+  const appearances=new Map(ids.map(id=>[id,2]));
+  let extra=40;
+  for(const id of ordered){
+    if(extra<=0)break;
+    appearances.set(id,3); extra--;
   }
-
-  while(battles.length<targetPairs){
+  const remaining=new Map(appearances);
+  const used=new Set();
+  let guard=0;
+  while(battles.length<120 && guard<20000){
+    guard++;
     let best=null,bestScore=-Infinity;
-    // 候補を全探索し、予選情報＋出場回数でカードを選ぶ。
     for(let i=0;i<ids.length;i++){
+      const a=ids[i];
+      if((remaining.get(a)||0)<=0)continue;
       for(let j=i+1;j<ids.length;j++){
-        const a=ids[i],z=ids[j],key=keyOf(a,z);
+        const z=ids[j];
+        if((remaining.get(z)||0)<=0)continue;
+        const key=keyOf(a,z);
         if(used.has(key))continue;
-        const score=pairScore(a,z);
+        const score=(priority(a)+priority(z)) + (remaining.get(a)+remaining.get(z))*0.5;
         if(score>bestScore){best=[a,z];bestScore=score;}
       }
     }
     if(!best)break;
     const [a,z]=best;
     used.add(keyOf(a,z));
-    scheduled.set(a,scheduled.get(a)+1);
-    scheduled.set(z,scheduled.get(z)+1);
-    const ca=candidates.find(c=>c.id===a),cz=candidates.find(c=>c.id===z);
-    battles.push(Math.random()<0.5?[ca,cz]:[cz,ca]);
+    remaining.set(a,remaining.get(a)-1);remaining.set(z,remaining.get(z)-1);
+    battles.push([candidates.find(c=>c.id===a),candidates.find(c=>c.id===z)]);
   }
+  stageOneEnd=battles.length;
   renderBattle();
   show('battle');
 }
+
 function renderBattle(){
-  if(b>=battles.length){finishBattle();return}
+  if(b>=battles.length){finishStageOrBattle();return;}
   const [a,z]=battles[b];
-  document.getElementById('battleInfo').textContent=`${b+1} / ${battles.length}`;
+  const label=battleStage==='explore' ? `探索 ${b+1} / ${stageOneEnd}` : `決選 ${b-stageOneEnd+1} / ${battles.length-stageOneEnd}`;
+  document.getElementById('battleInfo').textContent=label;
   document.getElementById('battleBar').style.width=`${(b/battles.length)*100}%`;
   document.getElementById('duel').innerHTML=[a,z].map(c=>`
     <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
@@ -160,12 +152,65 @@ function answer(type,id){
   applyElo(a,z,outcome);history.push({b,outcome,a:a.id,z:z.id});
   b++;renderBattle();
 }
+function getWinnersFromExplore(){
+  const wins=new Set();
+  history.filter(x=>x.b<stageOneEnd).forEach(x=>{
+    if(x.outcome==='a')wins.add(x.a);
+    else if(x.outcome==='b')wins.add(x.z);
+  });
+  return Array.from(wins);
+}
+function makeFinalStage(){
+  const winners=getWinnersFromExplore();
+  const selectedSet=new Set(qChoices.flat());
+  const winnerRank=winners.slice().sort((a,z)=>{
+    const sa=ratings.get(a)+(selectedSet.has(a)?10:0), sz=ratings.get(z)+(selectedSet.has(z)?10:0);
+    return sz-sa;
+  });
+  // 後半に進むのは、本戦前半で実際に「好き」と選ばれた人だけ。
+  // その中から上位30人を決選投票へ。
+  finalists=winnerRank.slice(0,30).map(id=>candidates.find(c=>c.id===id));
+  if(finalists.length<2){
+    finishBattle();
+    return;
+  }
+  // 決選は30人×4試合＝60試合。各人の比較回数を固定し、重複対戦は作らない。
+  const n=finalists.length;
+  const rounds=Math.min(4,Math.floor((n-1)/2));
+  const finalPairs=[];
+  const used=new Set();
+  for(let r=0;r<rounds;r++){
+    for(let i=0;i<Math.floor(n/2);i++){
+      const a=finalists[(i+r)%n], z=finalists[(n-1-i+r)%n];
+      const key=a.id<z.id?`${a.id}-${z.id}`:`${z.id}-${a.id}`;
+      if(a.id===z.id||used.has(key))continue;
+      used.add(key);finalPairs.push([a,z]);
+    }
+  }
+  // 30人なら60試合。人数が少ない場合でも、可能な範囲で決選を行う。
+  battles=battles.slice(0,stageOneEnd).concat(finalPairs.slice(0,60));
+  battleStage='final';
+  b=stageOneEnd;
+  renderBattle();
+}
+function finishStageOrBattle(){
+  if(battleStage==='explore'){
+    makeFinalStage();
+    return;
+  }
+  finishBattle();
+}
 function battleBack(){
   if(b===0)return;
+  // 決選開始地点まで戻った場合は、決選カード生成前の状態に戻す。
   b--;
-  history.pop();
+  history=history.filter(x=>x.b!==b);
   ratings=new Map(candidates.map(c=>[c.id,1500]));
-  history.forEach(x=>applyElo(qualified.find(c=>c.id===x.a),qualified.find(c=>c.id===x.z),x.outcome));
+  history.forEach(x=>{
+    const a=candidates.find(c=>c.id===x.a),z=candidates.find(c=>c.id===x.z);
+    if(a&&z)applyElo(a,z,x.outcome);
+  });
+  if(b<stageOneEnd)battleStage='explore';
   renderBattle();
 }
 function finishBattle(){

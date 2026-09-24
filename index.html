@@ -38,7 +38,7 @@ p{line-height:1.6}.muted{color:#666;font-size:14px}
 <main>
 <section id="start" class="screen active">
 <h1>好き顔9選</h1>
-<p>100人の候補から予選で最大75人を選び、本戦で「好きな顔」を二択比較します。</p>
+<p>100人の候補を前半で広く比較し、そこで「好き」と選んだ人だけを後半の決選投票に進めます。</p>
 <p class="muted" id="candidateStatus"></p>
 <button class="btn" onclick="startQual()">予選を始める</button>
 <a class="admin-link" href="admin.html">候補者を管理する</a>
@@ -63,7 +63,7 @@ p{line-height:1.6}.muted{color:#666;font-size:14px}
 </section>
 
 <section id="result" class="screen">
-<h1>好き顔9選</h1><p class="muted">本戦の比較結果から算出した順位です。</p>
+<h1>好き顔9選</h1><p class="muted">前半で選ばれた候補だけで決選投票を行い、その比較結果をもとに順位を算出しています。</p>
 <div id="top9" class="top9"></div>
 <h2>全順位</h2><div id="ranking" class="rank"></div>
 <button class="btn" onclick="location.reload()">最初からやり直す</button>
