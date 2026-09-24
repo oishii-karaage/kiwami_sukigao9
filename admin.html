@@ -103,6 +103,13 @@ function render(){
           <input type="text" id="group-${i}" value="${escapeAttr(c.group||"")}" placeholder="コンビ名（小さく表示）">
           <input type="text" id="name-${i}" value="${escapeAttr(c.name)}" placeholder="個人名（大きく表示）">
           <input type="file" accept="image/*" onchange="pickImage(${i},event)">
+          <div class="candidate-actions">
+            <select id="prelim-${i}" onchange="moveCandidate(${i},this.value)">
+              <option value="">予選組</option>
+              ${Array.from({length:25},(_,g)=>`<option value="${g+1}">第${g+1}組</option>`).join('')}
+            </select>
+            <small id="prelim-status-${i}"></small>
+          </div>
         </div>
       </div>
     </div>
@@ -275,7 +282,7 @@ function resetGroups(){
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
-renderGroupUI();
+render();
 </script>
 </body>
 </html>
