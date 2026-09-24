@@ -1,20 +1,42 @@
-const candidates = Array.from({length:100},(_,i)=>({
-  id:i+1,name:`候補者 ${String(i+1).padStart(3,'0')}`,
+const DEFAULT_CANDIDATES = Array.from({length:100},(_,i)=>({
+  id:i+1,
+  name:`候補者 ${String(i+1).padStart(3,'0')}`,
   image:`https://picsum.photos/seed/sukigao${i+1}/500/500`
 }));
 
+function loadCandidates(){
+  try{
+    const raw=localStorage.getItem('sukigao9_candidates');
+    if(!raw) return DEFAULT_CANDIDATES;
+    const saved=JSON.parse(raw);
+    if(!Array.isArray(saved) || saved.length!==100) return DEFAULT_CANDIDATES;
+    return saved.map((c,i)=>({
+      id:i+1,
+      name:(c.name||`候補者 ${String(i+1).padStart(3,'0')}`).trim(),
+      image:c.image||DEFAULT_CANDIDATES[i].image
+    }));
+  }catch(e){ return DEFAULT_CANDIDATES; }
+}
+
+const candidates = loadCandidates();
 let q=0, qChoices=Array.from({length:25},()=>[]), qualified=[];
 let battles=[], b=0, ratings=new Map(), history=[];
 
-function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active')}
-function startQual(){q=0;qChoices=Array.from({length:25},()=>[]);qualified=[];show('qual');renderQual()}
+function show(id){
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function startQual(){
+  q=0;qChoices=Array.from({length:25},()=>[]);qualified=[];
+  show('qual');renderQual();
+}
 function renderQual(){
   const start=q*4, group=candidates.slice(start,start+4), sel=qChoices[q]||[];
   document.getElementById('qualInfo').textContent=`第${q+1}/25組　選択済み ${qualified.length}人（この組から最大3人）`;
   document.getElementById('qualBar').style.width=`${(q/25)*100}%`;
   document.getElementById('qualGrid').innerHTML=group.map(c=>`
     <div class="card ${sel.includes(c.id)?'selected':''}" onclick="toggleQual(${c.id})">
-      <img src="${c.image}" alt=""><div class="name">${c.name}</div>
+      <img src="${c.image}" alt=""><div class="name">${escapeHtml(c.name)}</div>
     </div>`).join('');
   document.getElementById('qualBack').disabled=q===0;
 }
@@ -25,14 +47,13 @@ function toggleQual(id){
 }
 function qualBack(){if(q>0){q--;renderQual()}}
 function qualNext(){
-  if(qChoices[q].length>3)return;
   if(q===24){
-    qualified=qChoices.flat().map(id=>candidates.find(c=>c.id===id));
-    show('qualDone');document.getElementById('qualDoneText').textContent=`本戦進出者は ${qualified.length}人です。`;
+    qualified=qChoices.flat().map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
+    show('qualDone');
+    document.getElementById('qualDoneText').textContent=`本戦進出者は ${qualified.length}人です。`;
   }else{q++;renderQual()}
 }
 function startBattle(){
-  // 1人あたり約10比較を目安に、同一ペアを避けて生成
   ratings=new Map(qualified.map(c=>[c.id,1500]));
   battles=[];history=[];b=0;
   const target=Math.max(0,Math.floor(qualified.length*10/2));
@@ -53,7 +74,7 @@ function renderBattle(){
   document.getElementById('battleInfo').textContent=`${b+1} / ${battles.length}`;
   document.getElementById('battleBar').style.width=`${(b/battles.length)*100}%`;
   document.getElementById('duel').innerHTML=[a,z].map(c=>`
-    <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="name">${c.name}</div></div>`).join('');
+    <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   document.getElementById('battleBack').disabled=b===0;
 }
 function expected(ra,rb){return 1/(1+10**((rb-ra)/400))}
@@ -72,8 +93,7 @@ function answer(type,id){
 function battleBack(){
   if(b===0)return;
   b--;
-  const h=history.pop(); const a=qualified.find(c=>c.id===h.a),z=qualified.find(c=>c.id===h.z);
-  // 直前結果をEloから取り消すため、全履歴を再計算
+  history.pop();
   ratings=new Map(qualified.map(c=>[c.id,1500]));
   history.forEach(x=>applyElo(qualified.find(c=>c.id===x.a),qualified.find(c=>c.id===x.z),x.outcome));
   renderBattle();
@@ -82,8 +102,16 @@ function finishBattle(){
   const ranked=qualified.slice().sort((a,z)=>ratings.get(z.id)-ratings.get(a.id));
   const top=ranked.slice(0,9);
   document.getElementById('top9').innerHTML=top.map((c,i)=>`
-    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="name">${c.name}</div></div>`).join('');
+    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   document.getElementById('ranking').innerHTML=ranked.map((c,i)=>`
-    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="name">${c.name}</div></div>`).join('');
+    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   show('result');
 }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+document.getElementById('candidateStatus').textContent =
+  localStorage.getItem('sukigao9_candidates')
+  ? '登録済みの候補者データを使用しています。'
+  : '現在は仮候補100人です。「候補者を管理する」から写真と名前を登録できます。';
