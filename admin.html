@@ -19,7 +19,7 @@ button.danger{background:#b00020}
 .slot-head{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin-bottom:8px}
 .row{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:center}
 .preview{width:92px;height:92px;object-fit:cover;border-radius:10px;background:#eee}
-input[type=text]{width:100%;padding:12px;border:1px solid #ccc;border-radius:9px;font-size:16px}
+input[type=text]{width:100%;padding:12px;border:1px solid #ccc;border-radius:9px;font-size:16px;margin-bottom:8px}
 input[type=file]{width:100%;font-size:13px;margin-top:8px}
 .actions{position:sticky;bottom:0;background:rgba(247,247,247,.96);padding:10px 0;display:flex;gap:8px}
 .actions button{flex:1}
@@ -54,7 +54,7 @@ small{color:#777}
 const KEY='sukigao9_candidates';
 const defaults=Array.from({length:100},(_,i)=>({
   id:i+1,
-  name:`候補者 ${String(i+1).padStart(3,'0')}`,
+  group:'', name:`候補者 ${String(i+1).padStart(3,'0')}`,
   image:`https://picsum.photos/seed/sukigao${i+1}/500/500`
 }));
 let data=load();
@@ -75,7 +75,8 @@ function render(){
       <div class="row">
         <img class="preview" id="preview-${i}" src="${c.image}" alt="">
         <div>
-          <input type="text" id="name-${i}" value="${escapeAttr(c.name)}" placeholder="名前">
+          <input type="text" id="group-${i}" value="${escapeAttr(c.group||"")}" placeholder="コンビ名（小さく表示）">
+          <input type="text" id="name-${i}" value="${escapeAttr(c.name)}" placeholder="個人名（大きく表示）">
           <input type="file" accept="image/*" onchange="pickImage(${i},event)">
         </div>
       </div>
@@ -113,7 +114,7 @@ function compressImage(src){
 function syncNames(){
   data.forEach((c,i)=>{
     const el=document.getElementById('name-'+i);
-    if(el)c.name=el.value.trim()||`候補者 ${String(i+1).padStart(3,'0')}`;
+    if(el)const g=document.getElementById('group-'+i); c.group=g?g.value.trim():''; c.name=el.value.trim()||`候補者 ${String(i+1).padStart(3,'0')}`;
   });
 }
 function saveAll(){
@@ -142,7 +143,7 @@ function importData(e){
     try{
       const x=JSON.parse(reader.result);
       if(!Array.isArray(x)||x.length!==100)throw new Error();
-      data=x;
+      data=x.map((c,i)=>({id:i+1,group:c.group||'',name:c.name||`候補者 ${String(i+1).padStart(3,'0')}`,image:c.image||defaults[i].image}));
       render();
       alert('読み込みました。内容を確認して「この内容を保存」を押してください。');
     }catch(err){alert('正しい好き顔9選のデータファイルではありません。')}

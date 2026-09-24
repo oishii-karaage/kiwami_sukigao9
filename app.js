@@ -1,6 +1,6 @@
 const DEFAULT_CANDIDATES = Array.from({length:100},(_,i)=>({
   id:i+1,
-  name:`候補者 ${String(i+1).padStart(3,'0')}`,
+  group:'', name:`候補者 ${String(i+1).padStart(3,'0')}`,
   image:`https://picsum.photos/seed/sukigao${i+1}/500/500`
 }));
 
@@ -12,7 +12,7 @@ function loadCandidates(){
     if(!Array.isArray(saved) || saved.length!==100) return DEFAULT_CANDIDATES;
     return saved.map((c,i)=>({
       id:i+1,
-      name:(c.name||`候補者 ${String(i+1).padStart(3,'0')}`).trim(),
+      group:(c.group||'').trim(), name:(c.name||`候補者 ${String(i+1).padStart(3,'0')}`).trim(),
       image:c.image||DEFAULT_CANDIDATES[i].image
     }));
   }catch(e){ return DEFAULT_CANDIDATES; }
