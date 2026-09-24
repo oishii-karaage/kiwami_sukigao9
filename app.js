@@ -36,7 +36,7 @@ function renderQual(){
   document.getElementById('qualBar').style.width=`${(q/25)*100}%`;
   document.getElementById('qualGrid').innerHTML=group.map(c=>`
     <div class="card ${sel.includes(c.id)?'selected':''}" onclick="toggleQual(${c.id})">
-      <img src="${c.image}" alt=""><div class="name">${escapeHtml(c.name)}</div>
+      <img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div>
     </div>`).join('');
   document.getElementById('qualBack').disabled=q===0;
 }
@@ -74,7 +74,7 @@ function renderBattle(){
   document.getElementById('battleInfo').textContent=`${b+1} / ${battles.length}`;
   document.getElementById('battleBar').style.width=`${(b/battles.length)*100}%`;
   document.getElementById('duel').innerHTML=[a,z].map(c=>`
-    <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
+    <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   document.getElementById('battleBack').disabled=b===0;
 }
 function expected(ra,rb){return 1/(1+10**((rb-ra)/400))}
@@ -102,9 +102,9 @@ function finishBattle(){
   const ranked=qualified.slice().sort((a,z)=>ratings.get(z.id)-ratings.get(a.id));
   const top=ranked.slice(0,9);
   document.getElementById('top9').innerHTML=top.map((c,i)=>`
-    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
+    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   document.getElementById('ranking').innerHTML=ranked.map((c,i)=>`
-    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
+    <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   show('result');
 }
 function escapeHtml(s){
