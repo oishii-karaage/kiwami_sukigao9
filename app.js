@@ -20,6 +20,26 @@ function loadCandidates(){
 
 const candidates = loadCandidates();
 let q=0, qChoices=Array.from({length:25},()=>[]), qualified=[];
+const prelimGroups = loadPrelimGroups();
+
+function loadPrelimGroups(){
+  try{
+    const raw=localStorage.getItem('sukigao9_prelim_groups');
+    if(!raw) return null;
+    const x=JSON.parse(raw);
+    if(!Array.isArray(x) || x.length!==25 || x.some(g=>!Array.isArray(g) || g.length!==4)) return null;
+    const ids=x.flat();
+    if(ids.length!==100 || new Set(ids).size!==100) return null;
+    const validIds=new Set(candidates.map(c=>c.id));
+    if(ids.some(id=>!validIds.has(id))) return null;
+    return x;
+  }catch(e){ return null; }
+}
+
+function getPrelimGroup(n){
+  if(prelimGroups) return prelimGroups[n] || [];
+  return candidates.slice(n*4,n*4+4).map(c=>c.id);
+}
 let battles=[], b=0, ratings=new Map(), history=[];
 
 function show(id){
@@ -31,7 +51,9 @@ function startQual(){
   show('qual');renderQual();
 }
 function renderQual(){
-  const start=q*4, group=candidates.slice(start,start+4), sel=qChoices[q]||[];
+  const ids=getPrelimGroup(q);
+  const group=ids.map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
+  const sel=qChoices[q]||[];
   document.getElementById('qualInfo').textContent=`第${q+1}/25組　選択済み ${qualified.length}人（この組から最大3人）`;
   document.getElementById('qualBar').style.width=`${(q/25)*100}%`;
   document.getElementById('qualGrid').innerHTML=group.map(c=>`
@@ -54,19 +76,52 @@ function qualNext(){
   }else{q++;renderQual()}
 }
 function startBattle(){
-  ratings=new Map(qualified.map(c=>[c.id,1500]));
-  battles=[];history=[];b=0;
-  const target=Math.max(0,Math.floor(qualified.length*10/2));
-  const pairs=[];const used=new Set();
-  while(pairs.length<target && used.size < qualified.length*(qualified.length-1)/2){
-    const a=qualified[Math.floor(Math.random()*qualified.length)];
-    const z=qualified[Math.floor(Math.random()*qualified.length)];
-    if(a.id===z.id)continue;
-    const key=a.id<z.id?`${a.id}-${z.id}`:`${z.id}-${a.id}`;
-    if(used.has(key))continue;
-    used.add(key);pairs.push(Math.random()<.5?[a,z]:[z,a]);
+  screen('battle');
+  ratings={};
+  candidates.forEach(c=>ratings[c.id]=1500);
+
+  // All 100 candidates enter the main round.
+  // Aim for about 8 comparisons per person while avoiding duplicate pairs.
+  const targetPerPerson = 8;
+  const targetPairs = Math.floor(candidates.length * targetPerPerson / 2);
+  const ids = candidates.map(c=>c.id);
+  const pairs=[];
+  const used=new Set();
+
+  function pairKey(a,b){
+    return a<b ? `${a}|${b}` : `${b}|${a}`;
   }
-  battles=pairs;renderBattle();show('battle');
+
+  // Prefer candidates with fewer scheduled comparisons, then randomize.
+  const scheduled={};
+  ids.forEach(id=>scheduled[id]=0);
+
+  while(pairs.length < targetPairs){
+    let bestA=null, bestB=null, bestScore=Infinity;
+
+    for(let i=0;i<ids.length;i++){
+      for(let j=i+1;j<ids.length;j++){
+        const a=ids[i], b=ids[j], key=pairKey(a,b);
+        if(used.has(key)) continue;
+        const score=scheduled[a]+scheduled[b]+Math.random()*0.25;
+        if(score<bestScore){
+          bestScore=score;
+          bestA=a; bestB=b;
+        }
+      }
+    }
+
+    if(bestA===null) break;
+    used.add(pairKey(bestA,bestB));
+    scheduled[bestA]++;
+    scheduled[bestB]++;
+    pairs.push(Math.random()<0.5 ? [bestA,bestB] : [bestB,bestA]);
+  }
+
+  battlePairs=pairs;
+  b=0;
+  history=[];
+  renderBattle();
 }
 function renderBattle(){
   if(b>=battles.length){finishBattle();return}
@@ -113,5 +168,5 @@ function escapeHtml(s){
 
 document.getElementById('candidateStatus').textContent =
   localStorage.getItem('sukigao9_candidates')
-  ? '登録済みの候補者データを使用しています。'
+  ? (prelimGroups ? '登録済みの候補者データと予選グループ設定を使用しています。' : '登録済みの候補者データを使用しています。予選グループは登録順です。')
   : '現在は仮候補100人です。「候補者を管理する」から写真と名前を登録できます。';

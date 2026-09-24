@@ -21,6 +21,18 @@ button.danger{background:#b00020}
 .preview{width:92px;height:92px;object-fit:cover;border-radius:10px;background:#eee}
 input[type=text]{width:100%;padding:12px;border:1px solid #ccc;border-radius:9px;font-size:16px;margin-bottom:8px}
 input[type=file]{width:100%;font-size:13px;margin-top:8px}
+.group-box{background:#fff;border:1px solid #ddd;border-radius:14px;padding:14px;margin:18px 0}
+.group-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0}
+.group-tab{padding:9px 4px;border:1px solid #ccc;border-radius:9px;background:#f2f2f2;color:#222;font-size:13px}
+.group-tab.active{background:#222;color:#fff;border-color:#222}
+.group-count{font-size:13px;color:#666;margin:6px 0 12px}
+.group-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.group-card{border:1px solid #ddd;border-radius:10px;background:#fff;padding:8px;display:flex;align-items:center;gap:8px}
+.group-card img{width:58px;height:58px;object-fit:cover;border-radius:8px;background:#eee}
+.group-card .gname{font-size:12px;line-height:1.25}
+.group-card .gname strong{display:block;font-size:14px}
+.candidate-actions{display:flex;gap:6px;align-items:center}
+.candidate-actions select{width:76px;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:14px}
 .actions{position:sticky;bottom:0;background:rgba(247,247,247,.96);padding:10px 0;display:flex;gap:8px}
 .actions button{flex:1}
 a{color:#333}
@@ -43,6 +55,19 @@ small{color:#777}
 </div>
 
 <div id="slots"></div>
+
+<section class="group-box">
+  <h2>予選グループを組む</h2>
+  <p class="muted">100人の登録が終わったら、写真を見ながら「似た系統の顔」4人ずつに分けられます。ここで設定した順番が予選の組み合わせになります。</p>
+  <p class="muted">自動で顔の系統を判定する機能ではなく、あなたが写真を見て手動で組む方式です。各グループは必ず4人にしてください。</p>
+  <div class="toolbar">
+    <button onclick="saveGroups()">予選グループを保存</button>
+    <button class="secondary" onclick="resetGroups()">登録順に戻す</button>
+  </div>
+  <div id="groupTabs" class="group-tabs"></div>
+  <div id="groupCount" class="group-count"></div>
+  <div id="groupGrid" class="group-grid"></div>
+</section>
 
 <div class="actions">
 <button class="secondary" onclick="location.href='index.html'">好き顔9選へ戻る</button>
@@ -82,6 +107,14 @@ function render(){
       </div>
     </div>
   `).join('');
+  data.forEach((c,i)=>{
+    const g=groupForCandidate(c.id);
+    const el=document.getElementById('prelim-'+i);
+    const st=document.getElementById('prelim-status-'+i);
+    if(el) el.value=g>=0?String(g+1):'';
+    if(st) st.textContent=g>=0?`第${g+1}組`:'';
+  });
+  renderGroupUI();
 }
 function escapeAttr(s){
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -150,7 +183,99 @@ function importData(e){
   };
   reader.readAsText(file);
 }
-render();
+
+const GROUP_KEY='sukigao9_prelim_groups';
+let prelimGroupsAdmin=loadGroupsAdmin();
+let currentGroup=0;
+
+function loadGroupsAdmin(){
+  try{
+    const raw=localStorage.getItem(GROUP_KEY);
+    if(!raw) return Array.from({length:25},()=>[]);
+    const x=JSON.parse(raw);
+    if(!Array.isArray(x)||x.length!==25) return Array.from({length:25},()=>[]);
+    return x.map(g=>Array.isArray(g)?g.map(Number).filter(Boolean):[]);
+  }catch(e){return Array.from({length:25},()=>[])}
+}
+function groupForCandidate(id){
+  return prelimGroupsAdmin.findIndex(g=>g.includes(id));
+}
+function renderGroupUI(){
+  const tabs=document.getElementById('groupTabs');
+  const grid=document.getElementById('groupGrid');
+  const count=document.getElementById('groupCount');
+  if(!tabs||!grid||!count)return;
+  tabs.innerHTML=Array.from({length:25},(_,g)=>{
+    const n=prelimGroupsAdmin[g].length;
+    return `<button class="group-tab ${g===currentGroup?'active':''}" onclick="selectGroup(${g})">第${g+1}組<br>${n}/4</button>`;
+  }).join('');
+  const ids=prelimGroupsAdmin[currentGroup]||[];
+  count.textContent=`第${currentGroup+1}組：${ids.length}/4人`;
+  grid.innerHTML=ids.length
+    ? ids.map(id=>{
+        const c=data.find(x=>x.id===id);
+        if(!c)return '';
+        return `<div class="group-card"><img src="${c.image}" alt=""><div class="gname">${escapeHtml(c.group||'')}<strong>${escapeHtml(c.name)}</strong></div></div>`;
+      }).join('')
+    : '<div class="muted" style="grid-column:1/-1">まだ候補者が入っていません。下の候補者一覧から「予選組」を選んでください。</div>';
+}
+function selectGroup(g){
+  currentGroup=g;
+  renderGroupUI();
+}
+function moveCandidate(i,value){
+  syncNames();
+  const id=data[i].id;
+  const old=groupForCandidate(id);
+  if(old>=0) prelimGroupsAdmin[old]=prelimGroupsAdmin[old].filter(x=>x!==id);
+  if(value){
+    const g=Number(value)-1;
+    if(prelimGroupsAdmin[g].length>=4){
+      alert(`第${g+1}組はすでに4人です。`);
+      if(old>=0) prelimGroupsAdmin[old].push(id);
+      document.getElementById('prelim-'+i).value=old>=0?String(old+1):'';
+      renderGroupUI();
+      return;
+    }
+    prelimGroupsAdmin[g].push(id);
+    currentGroup=g;
+  }
+  document.getElementById('prelim-status-'+i).textContent=value?`第${value}組`:'未設定';
+  renderGroupUI();
+}
+function saveGroups(){
+  syncNames();
+  const incomplete=prelimGroupsAdmin.findIndex(g=>g.length!==4);
+  if(incomplete>=0){
+    alert(`第${incomplete+1}組が${prelimGroupsAdmin[incomplete].length}人です。全25組を4人ずつにしてください。`);
+    currentGroup=incomplete;
+    renderGroupUI();
+    return;
+  }
+  const ids=prelimGroupsAdmin.flat();
+  if(ids.length!==100 || new Set(ids).size!==100){
+    alert('100人全員を1回ずつ、どこかの組に入れてください。');
+    return;
+  }
+  localStorage.setItem(GROUP_KEY,JSON.stringify(prelimGroupsAdmin));
+  alert('予選グループを保存しました。好き顔9選ではこの組み合わせで予選が行われます。');
+}
+function resetGroups(){
+  prelimGroupsAdmin=Array.from({length:25},(_,g)=>data.slice(g*4,g*4+4).map(c=>c.id));
+  for(let i=0;i<data.length;i++){
+    const g=groupForCandidate(data[i].id);
+    const el=document.getElementById('prelim-'+i);
+    const st=document.getElementById('prelim-status-'+i);
+    if(el)el.value=g>=0?String(g+1):'';
+    if(st)st.textContent=g>=0?`第${g+1}組`:'';
+  }
+  currentGroup=0;
+  renderGroupUI();
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+renderGroupUI();
 </script>
 </body>
 </html>
