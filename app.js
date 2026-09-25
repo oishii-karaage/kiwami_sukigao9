@@ -75,7 +75,6 @@ function startQual(){
 function renderQual(){
   const group=getPrelimGroup(q).map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
   const sel=qChoices[q]||[];
-  const count=qChoices.flat().length;
   document.getElementById('qualInfo').textContent=`組 ${q+1} / 25　　　　　　　　　${Math.min(100,q*4)} / 100人`;
   document.getElementById('qualBar').style.width=`${q*4}%`;
   document.getElementById('qualGrid').innerHTML=group.map(c=>`
@@ -149,26 +148,20 @@ function choosePair(stage){
       const va=candidateValue(a), vz=candidateValue(z);
       let sc=0;
 
-      // 出場回数の偏りを抑える。
       sc += (4-Math.min(4,aa))*2.2 + (4-Math.min(4,az))*2.2;
 
       if(stage===1){
-        // 最序盤は探索。予選選出者を少しだけ優先しつつ、同じ予選グループを避ける。
         sc += (selected.has(a)?0.35:0) + (selected.has(z)?0.35:0);
         sc += (groupCount[ga]||0)*0.08 + (groupCount[gz]||0)*0.08;
         if(ga===gz) sc-=8;
-        // まだ出ていない人を強く優先。
         if(aa===0)sc+=4;if(az===0)sc+=4;
       }else if(stage===2){
-        // 中盤は、本戦で「好き」を取った候補を徐々に中心へ。
         sc += (selected.has(a)?0.5:0) + (selected.has(z)?0.5:0);
         sc += Math.max(0,va)*3 + Math.max(0,vz)*3;
         sc += (groupCount[ga]||0)*0.35 + (groupCount[gz]||0)*0.35;
-        // 点数が近い候補を比較して順位を精密化。
         sc += Math.max(0,3-Math.abs(va-vz))*2;
         if(ga===gz)sc-=2;
       }else{
-        // 後半は決選投票ではなく、評価が近い・比較不足の候補を精密比較。
         sc += Math.max(0,5-Math.abs(va-vz))*5;
         sc += Math.abs(aa-az)*-0.4;
         sc += Math.max(0,va)+Math.max(0,vz);
@@ -183,9 +176,7 @@ function startBattle(){
   initStats();
   battles=[]; b=0;
   const p=qChoices.flat().length;
-  // 予選の選択人数に応じて比較数を調整。上限を設けて長くなりすぎないようにする。
   targetMatches=clamp(140 + p*2,150,240);
-  // 最序盤は「発掘」に使う。残りは本戦での評価に応じて出し方を変える。
   exploreMatches=clamp(35 + Math.round(p*0.6),40,75);
   renderBattle();
   show('battle');
@@ -208,7 +199,6 @@ function renderBattle(){
     if(!pair){finishBattle();return;}
   }
   const [a,z]=battles[b];
-  document.getElementById('battleInfo').textContent='';
   document.getElementById('battleBar').style.width=`${(b/targetMatches)*100}%`;
   document.getElementById('duel').innerHTML=[a,z].map(c=>`
     <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
@@ -245,14 +235,12 @@ function battleBack(){
   const h=historyLog.pop();
   if(h){
     const a=candidates.find(c=>c.id===h.a),z=candidates.find(c=>c.id===h.z);
-    // 結果を逆算して完全に元へ戻す。
     if(h.type==='win'){score.set(a.id,score.get(a.id)-2);score.set(z.id,score.get(z.id)+1);}
     else if(h.type==='lose'){score.set(a.id,score.get(a.id)+1);score.set(z.id,score.get(z.id)-2);}
     else if(h.type==='both'){score.set(a.id,score.get(a.id)-1);score.set(z.id,score.get(z.id)-1);}
     else if(h.type==='neither'){score.set(a.id,score.get(a.id)+1);score.set(z.id,score.get(z.id)+1);}
     appearances.set(a.id,appearances.get(a.id)-1);appearances.set(z.id,appearances.get(z.id)-1);
   }
-  // 戻った時点より後に生成されたペアは捨てる。次のペアは現在の回答状況から再生成する。
   battles=battles.slice(0,b+1);
   renderBattle();
 }
@@ -270,8 +258,6 @@ function finishBattle(){
   document.querySelector('#result .muted').textContent=`比較回数 ${historyLog.length}回。予選での選択と本戦での評価をもとに、好き度を集計しています。`;
   show('result');
 }
-
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
-
