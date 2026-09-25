@@ -189,10 +189,10 @@ function startBattle(){
   targetMatches=clamp(140+p*2,150,240);
   exploreMatches=clamp(35+Math.round(p*0.6),40,75);
 
-  // 対戦順は「表示する直前」に現在の回答状況を見て生成する。
+  // 先に本戦画面を表示してから、現在の回答状況に応じたペアを生成する。
   // 一度生成したペアは battles に保持するので、戻っても同じペアになる。
-  renderBattle();
   show('battle');
+  renderBattle();
 }
 
 function currentStage(){
