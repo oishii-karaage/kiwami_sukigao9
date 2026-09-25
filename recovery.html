@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>好き顔9選｜データ救出</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f7f7f7;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif}main{max-width:600px;margin:auto;padding:24px 16px 48px}h1{font-size:24px;margin:0 0 14px}.box{background:#fff;border:1px solid #ddd;border-radius:14px;padding:16px;margin:14px 0}.muted{color:#666;font-size:14px;line-height:1.7}button{width:100%;border:0;border-radius:10px;padding:14px;font-size:16px;font-weight:700;background:#222;color:#fff;margin-top:10px}.status{font-size:14px;line-height:1.7;white-space:pre-wrap}.ok{font-weight:700}.error{color:#b00020;font-weight:700}code{background:#eee;padding:2px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>好き顔9選｜データ救出</h1>
+<div class="box">
+<p class="muted">このページは、現在このサイトのSafariに保存されている100人分の候補者データと予選グループを取り出すための一時ページです。</p>
+<p class="muted"><strong>このページを開いたまま、下のボタンを1回押してください。</strong></p>
+<div id="status" class="status">確認中…</div>
+<button id="exportBtn" onclick="exportData()">100人分のデータを書き出す</button>
+</div>
+<div class="box">
+<p class="muted">書き出されたファイル名：<code>sukigao9_data.json</code></p>
+<p class="muted">ダウンロード後、このチャットにそのJSONファイルを添付してください。こちらで公開版に組み込みます。</p>
+</div>
+<script>
+const CAND='sukigao9_candidates';
+const GROUP='sukigao9_prelim_groups';
+const statusEl=document.getElementById('status');
+function read(){
+  let candidates=null, groups=null;
+  try{candidates=JSON.parse(localStorage.getItem(CAND)||'null')}catch(e){}
+  try{groups=JSON.parse(localStorage.getItem(GROUP)||'null')}catch(e){}
+  return {candidates,groups};
+}
+function check(){
+  const {candidates,groups}=read();
+  const lines=[];
+  lines.push('候補者データ：'+(Array.isArray(candidates)?candidates.length+'人':'見つかりません'));
+  lines.push('予選グループ：'+(Array.isArray(groups)?groups.length+'組':'見つかりません'));
+  if(Array.isArray(candidates)&&candidates.length===100){
+    lines.push('写真データ：'+candidates.filter(c=>c&&typeof c.image==='string'&&c.image.startsWith('data:')).length+'人分を確認');
+    statusEl.className='status ok';
+  }else{
+    statusEl.className='status error';
+    lines.push('100人分のデータが見つかりません。');
+  }
+  statusEl.textContent=lines.join('\n');
+}
+function exportData(){
+  const {candidates,groups}=read();
+  if(!Array.isArray(candidates)||candidates.length!==100){
+    alert('100人分の候補者データが見つかりません。現在のサイトを開いているSafariと同じブラウザで、このページを開いてください。');
+    return;
+  }
+  const payload={candidates,prelimGroups:Array.isArray(groups)?groups:null,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='sukigao9_data.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  statusEl.textContent='書き出しました。ファイル名：sukigao9_data.json\nこのJSONファイルをこのチャットに添付してください。';
+  statusEl.className='status ok';
+}
+check();
+</script>
+</main>
+</body>
+</html>
