@@ -3,452 +3,287 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>候補者管理｜好き顔9選</title>
+<title>極 好き顔9選 — グループ編集</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f7f7f7;color:#222}
-main{max-width:760px;margin:auto;padding:18px 12px 48px}
-h1{font-size:26px;margin:8px 0}h2{font-size:20px;margin:28px 0 12px}
-.muted{color:#666;font-size:14px;line-height:1.6}
-.notice{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin:14px 0}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-button{border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:700;background:#222;color:#fff}
-button.secondary{background:#e9e9e9;color:#222}
-.slot{background:#fff;border:1px solid #ddd;border-radius:14px;padding:12px;margin:10px 0}
-.slot-head{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin-bottom:8px}
-.row{display:grid;grid-template-columns:92px 1fr;gap:12px;align-items:center}
-.preview{width:92px;height:92px;object-fit:cover;border-radius:10px;background:#eee}
-input[type=text]{width:100%;padding:12px;border:1px solid #ccc;border-radius:9px;font-size:16px;margin-bottom:8px}
-input[type=file]{width:100%;font-size:13px;margin-top:8px}
-.group-box{background:#fff;border:1px solid #ddd;border-radius:14px;padding:14px;margin:18px 0}
-.group-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:12px 0}
-.group-tab{padding:9px 4px;border:1px solid #ccc;border-radius:9px;background:#f2f2f2;color:#222;font-size:13px}
-.group-tab.active{background:#222;color:#fff;border-color:#222}
-.group-count{font-size:13px;color:#666;margin:6px 0 12px}
-.group-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.group-card{border:1px solid #ddd;border-radius:10px;background:#fff;padding:8px;display:flex;align-items:center;gap:8px}
-.group-card img{width:58px;height:58px;object-fit:cover;border-radius:8px;background:#eee}
-.group-card .gname{font-size:12px;line-height:1.25;min-width:0}
-.group-card .gname strong{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.group-card button{margin-left:auto;padding:7px 9px;background:#eee;color:#222;font-size:12px}
-.candidate-picker{margin-top:16px}
-.picker-head{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-.picker-head input{flex:1;margin:0;padding:10px 12px;border:1px solid #ccc;border-radius:9px;font-size:15px}
-.picker-note{font-size:13px;color:#666;margin:8px 0}
-.picker-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.picker-card{border:1px solid #ddd;border-radius:10px;background:#fff;padding:8px;display:grid;grid-template-columns:58px 1fr;gap:8px;align-items:center}
-.picker-card img{width:58px;height:58px;object-fit:cover;border-radius:8px;background:#eee}
-.picker-card .pinfo{min-width:0;font-size:11px;color:#777}
-.picker-card .pinfo strong{display:block;font-size:14px;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.picker-card .pinfo span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.picker-card .paction{grid-column:1/-1}
-.picker-card .paction button{width:100%;padding:8px;font-size:13px}
-.picker-card .paction button:disabled{background:#ddd;color:#777}
-.actions{position:sticky;bottom:0;background:rgba(247,247,247,.96);padding:10px 0;display:flex;gap:8px}
-.actions button{flex:1}
-small{color:#777}
+body{margin:0;background:#f5f5f7;color:#171717;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
+header{position:sticky;top:0;z-index:20;background:#111;color:#fff;padding:14px 16px;box-shadow:0 2px 10px #0002}
+h1{font-size:18px;margin:0 0 5px}
+.sub{font-size:12px;opacity:.75}
+.wrap{max-width:1100px;margin:auto;padding:14px}
+.notice{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.6}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+button,input,select{font:inherit}
+button{border:0;border-radius:9px;padding:9px 12px;background:#222;color:#fff;cursor:pointer}
+button.secondary{background:#fff;color:#222;border:1px solid #ccc}
+button.danger{background:#b42318}
+button:disabled{opacity:.45;cursor:default}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+.tab{background:#fff;color:#222;border:1px solid #ddd;padding:8px 4px;font-size:12px}
+.tab.active{background:#222;color:#fff;border-color:#222}
+.panel{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px;margin-bottom:12px}
+.panel h2{font-size:16px;margin:0 0 10px}
+.search{width:100%;padding:11px;border:1px solid #ccc;border-radius:9px;margin-bottom:10px}
+.groupgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.slot{border:1px dashed #bbb;border-radius:10px;padding:7px;min-height:170px;position:relative}
+.slot .num{font-size:11px;color:#777;margin-bottom:5px}
+.card{position:relative}
+.card img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;display:block;background:#eee}
+.card .name{font-size:13px;font-weight:700;margin-top:5px;line-height:1.25}
+.card .group{font-size:11px;color:#777;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot select{width:100%;margin-top:7px;padding:7px;border:1px solid #ccc;border-radius:7px;background:#fff}
+.allgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.person{background:#fff;border:1px solid #ddd;border-radius:9px;padding:6px}
+.person img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:6px}
+.person .name{font-size:11px;font-weight:700;margin-top:4px;line-height:1.25}
+.person .meta{font-size:10px;color:#777;margin-top:2px}
+.person select{width:100%;font-size:11px;margin-top:5px;padding:5px;border:1px solid #ccc;border-radius:6px}
+.status{font-size:13px;font-weight:700;margin-left:auto;align-self:center}
+.ok{color:#18794e}.bad{color:#b42318}
+@media(max-width:700px){
+  .groupgrid{grid-template-columns:repeat(2,1fr)}
+  .allgrid{grid-template-columns:repeat(3,1fr)}
+  .tabs{grid-template-columns:repeat(5,1fr)}
+}
 </style>
 </head>
 <body>
-<main>
-<h1>候補者管理</h1>
-<p class="muted">登録されている100人の写真・名前を確認し、予選25組を編集できます。</p>
+<header>
+  <h1>よしもと漫才劇場 極 好き顔9選 — グループ編集</h1>
+  <div class="sub">予選25グループのメンバーを編集します</div>
+</header>
 
-<div class="notice">
-<strong>グループ編集：</strong>「第○組」を選び、下の候補者をタップするとその組へ移動します。1組4人です。変更はこのiPhoneのブラウザに保存され、「好き顔9選」の予選にも反映されます。
-</div>
+<div class="wrap">
+  <div class="notice">
+    <b>編集対象：</b>予選の25グループ（各4人）。<br>
+    「保存」を押すと、このブラウザの <code>sukigao9_prelim_groups</code> に保存され、同じ端末の本編でそのグループ分けが使われます。
+    <br>現在の <code>data.js</code> に入っている100人・25グループを初期値として読み込んでいます。
+  </div>
 
-<div class="toolbar">
-<button onclick="saveAll()">この内容を保存</button>
-<button class="secondary" onclick="exportData()">データを書き出す</button>
-<button class="secondary" onclick="document.getElementById('importFile').click()">データを読み込む</button>
-<input id="importFile" type="file" accept="application/json" hidden onchange="importData(event)">
-</div>
+  <div class="toolbar">
+    <button onclick="saveGroups()">変更を保存</button>
+    <button class="secondary" onclick="resetGroups()">data.jsの初期グループに戻す</button>
+    <button class="secondary" onclick="exportDataJs()">data.jsとして書き出す</button>
+    <button class="secondary" onclick="exportJson()">JSONを書き出す</button>
+    <button class="secondary" onclick="importJson()">JSONを読み込む</button>
+    <input id="fileInput" type="file" accept=".json,application/json" hidden>
+    <span id="status" class="status"></span>
+  </div>
 
-<section class="group-box">
-<h2>予選グループを組む</h2>
-<p class="muted">写真を見ながら4人ずつ25組に分けられます。現在の組から外して別の組へ移動することもできます。</p>
-<div class="toolbar">
-<button onclick="saveGroups()">予選グループを保存</button>
-<button class="secondary" onclick="resetGroups()">登録順に戻す</button>
-</div>
-<div id="groupTabs" class="group-tabs"></div>
-<div id="groupCount" class="group-count"></div>
-<div id="groupGrid" class="group-grid"></div>
-<div class="candidate-picker">
-<div class="picker-head">
-<input id="candidateSearch" type="search" placeholder="名前・コンビ名で検索" oninput="renderCandidatePicker()">
-</div>
-<div class="picker-note">候補者をタップすると、現在選択中の組へ移動します。</div>
-<div id="candidatePicker" class="picker-grid"></div>
-</div>
-</section>
+  <div class="panel">
+    <h2 id="groupTitle">グループ1</h2>
+    <div id="tabs" class="tabs"></div>
+    <div id="groupGrid" class="groupgrid"></div>
+  </div>
 
-<h2>候補者</h2>
-<div id="slots"></div>
-
-<div class="actions">
-<button class="secondary" onclick="location.href='index.html'">好き顔9選へ戻る</button>
-<button onclick="saveAll()">保存する</button>
+  <div class="panel">
+    <h2>全100人から選ぶ</h2>
+    <input id="search" class="search" placeholder="名前・所属で検索">
+    <div id="allGrid" class="allgrid"></div>
+  </div>
 </div>
-</main>
 
 <script src="data.js"></script>
 <script>
-/*
-  重要:
-  旧管理画面は embeddedGroups が未定義だったため、
-  data.js の SUKIGAO9_DATA を直接読み込む方式に修正しています。
-*/
-const EMBEDDED_DATA =
-  (window.SUKIGAO9_DATA && Array.isArray(window.SUKIGAO9_DATA.candidates))
-    ? window.SUKIGAO9_DATA
-    : {candidates:[],prelimGroups:[]};
+"use strict";
 
-const KEY='sukigao9_candidates';
-const GROUP_KEY='sukigao9_prelim_groups';
-
-const embeddedCandidates = EMBEDDED_DATA.candidates.length===100
-  ? EMBEDDED_DATA.candidates.map((c,i)=>({
-      id:i+1,
-      group:String(c.group||''),
-      name:String(c.name||('候補者 '+String(i+1).padStart(3,'0'))),
-      image:c.image||''
-    }))
-  : [];
-
-const embeddedGroups =
-  Array.isArray(EMBEDDED_DATA.prelimGroups) &&
-  EMBEDDED_DATA.prelimGroups.length===25 &&
-  EMBEDDED_DATA.prelimGroups.every(g=>Array.isArray(g))
-    ? EMBEDDED_DATA.prelimGroups.map(g=>g.map(Number).filter(Boolean))
-    : Array.from({length:25},(_,g)=>embeddedCandidates.slice(g*4,g*4+4).map(c=>c.id));
-
-let data=loadCandidates();
-let prelimGroupsAdmin=loadGroupsAdmin();
-let currentGroup=0;
-
-function cloneCandidates(x){
-  return x.map((c,i)=>({
-    id:i+1,
-    group:String(c.group||''),
-    name:String(c.name||('候補者 '+String(i+1).padStart(3,'0'))),
-    image:c.image||''
-  }));
+const BASE = window.SUKIGAO9_DATA;
+if(!BASE || !Array.isArray(BASE.candidates) || BASE.candidates.length !== 100 ||
+   !Array.isArray(BASE.prelimGroups) || BASE.prelimGroups.length !== 25){
+  document.body.innerHTML = '<div style="padding:20px;font-family:sans-serif"><b>data.jsを読み込めません。</b><br>admin.htmlとdata.jsを同じ場所に置いてください。</div>';
+  throw new Error("Invalid data.js");
 }
 
-function isValidCandidates(x){
-  return Array.isArray(x) && x.length===100 &&
-    x.every((c,i)=>c && Number(c.id)===i+1 && typeof c.image==='string');
-}
+const candidates = BASE.candidates.map(c => ({
+  id:Number(c.id), group:String(c.group||""), name:String(c.name||""), image:String(c.image||"")
+}));
+const byId = new Map(candidates.map(c => [c.id,c]));
+const INITIAL_GROUPS = BASE.prelimGroups.map(g => g.map(Number));
+const STORAGE_KEY = "sukigao9_prelim_groups";
 
-function loadCandidates(){
-  try{
-    const raw=localStorage.getItem(KEY);
-    if(raw){
-      const x=JSON.parse(raw);
-      if(isValidCandidates(x)){
-        const placeholder=x.filter(c=>/^候補者\s*\d{3}$/.test(String(c.name||''))).length;
-        if(placeholder<90) return cloneCandidates(x);
-      }
-    }
-  }catch(e){}
-  if(embeddedCandidates.length===100){
-    const x=cloneCandidates(embeddedCandidates);
-    try{localStorage.setItem(KEY,JSON.stringify(x));}catch(e){}
-    return x;
-  }
-  return Array.from({length:100},(_,i)=>({
-    id:i+1,group:'',name:`候補者 ${String(i+1).padStart(3,'0')}`,image:''
-  }));
-}
+let groups = loadGroups();
+let current = 0;
 
 function validGroups(x){
-  if(!Array.isArray(x)||x.length!==25)return false;
-  const ids=x.flat();
-  return x.every(g=>Array.isArray(g)&&g.length===4) &&
-    ids.length===100 &&
-    new Set(ids).size===100 &&
-    ids.every(id=>data.some(c=>c.id===Number(id)));
+  if(!Array.isArray(x) || x.length!==25) return false;
+  if(x.some(g => !Array.isArray(g) || g.length!==4)) return false;
+  const ids=x.flat().map(Number);
+  return ids.length===100 && new Set(ids).size===100 && ids.every(id=>byId.has(id));
 }
 
-function loadGroupsAdmin(){
+function cloneGroups(x){ return x.map(g=>g.slice()); }
+
+function loadGroups(){
   try{
-    const raw=localStorage.getItem(GROUP_KEY);
+    const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){
-      const x=JSON.parse(raw).map(g=>Array.isArray(g)?g.map(Number).filter(Boolean):[]);
-      if(validGroups(x))return x;
+      const x=JSON.parse(raw);
+      if(validGroups(x)) return x.map(g=>g.map(Number));
     }
   }catch(e){}
-  if(validGroups(embeddedGroups)){
-    const x=embeddedGroups.map(g=>g.slice());
-    try{localStorage.setItem(GROUP_KEY,JSON.stringify(x));}catch(e){}
-    return x;
-  }
-  return Array.from({length:25},(_,g)=>data.slice(g*4,g*4+4).map(c=>c.id));
+  return cloneGroups(INITIAL_GROUPS);
 }
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g,ch=>({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[ch]));
-}
-function escapeAttr(s){return escapeHtml(s)}
-
-function syncNames(){
-  data.forEach((c,i)=>{
-    const g=document.getElementById('group-'+i);
-    const n=document.getElementById('name-'+i);
-    if(g)c.group=g.value.trim();
-    if(n)c.name=n.value.trim()||`候補者 ${String(i+1).padStart(3,'0')}`;
-  });
+function setStatus(msg, ok=true){
+  const el=document.getElementById("status");
+  el.textContent=msg;
+  el.className="status "+(ok?"ok":"bad");
+  clearTimeout(setStatus.t);
+  setStatus.t=setTimeout(()=>{el.textContent="";},3000);
 }
 
-function persist(){
-  try{
-    localStorage.setItem(KEY,JSON.stringify(data));
-    localStorage.setItem(GROUP_KEY,JSON.stringify(prelimGroupsAdmin));
-    return true;
-  }catch(e){
-    alert('保存できませんでした。写真データの容量が大きすぎる可能性があります。');
-    return false;
-  }
+function renderTabs(){
+  const tabs=document.getElementById("tabs");
+  tabs.innerHTML=groups.map((g,i)=>
+    `<button class="tab ${i===current?"active":""}" onclick="selectGroup(${i})">組${i+1}<br><small>${g.length}/4</small></button>`
+  ).join("");
 }
 
-function saveAll(){
-  syncNames();
-  if(persist())alert('保存しました。候補者データと予選グループを保存しました。');
-}
-
-function renderCandidates(){
-  document.getElementById('slots').innerHTML=data.map((c,i)=>`
-    <div class="slot">
-      <div class="slot-head"><span>${i+1}人目</span><small id="status-${i}"></small></div>
-      <div class="row">
-        <img class="preview" id="preview-${i}" src="${escapeAttr(c.image)}" alt="">
-        <div>
-          <input type="text" id="group-${i}" value="${escapeAttr(c.group)}" placeholder="コンビ名">
-          <input type="text" id="name-${i}" value="${escapeAttr(c.name)}" placeholder="個人名">
-          <input type="file" accept="image/*" onchange="pickImage(${i},event)">
-          <small id="prelim-status-${i}"></small>
-        </div>
+function renderGroup(){
+  document.getElementById("groupTitle").textContent=`グループ${current+1}`;
+  const grid=document.getElementById("groupGrid");
+  grid.innerHTML=groups[current].map((id,i)=>{
+    const c=byId.get(id);
+    return `<div class="slot">
+      <div class="num">${i+1}人目</div>
+      <div class="card">
+        <img src="${c.image}" alt="">
+        <div class="name">${esc(c.name)}</div>
+        <div class="group">${esc(c.group)}</div>
       </div>
-    </div>
-  `).join('');
-  updateCandidateSelectors();
-}
-
-function pickImage(i,e){
-  const file=e.target.files&&e.target.files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    compressImage(reader.result).then(src=>{
-      data[i].image=src;
-      const img=document.getElementById('preview-'+i);
-      if(img)img.src=src;
-      const st=document.getElementById('status-'+i);
-      if(st)st.textContent='写真変更済み';
-      try{localStorage.setItem(KEY,JSON.stringify(data));}catch(err){}
-      renderGroupUI();
-    });
-  };
-  reader.readAsDataURL(file);
-}
-
-function compressImage(src){
-  return new Promise(resolve=>{
-    const img=new Image();
-    img.onload=()=>{
-      const max=700;
-      const scale=Math.min(1,max/Math.max(img.width,img.height));
-      const c=document.createElement('canvas');
-      c.width=Math.max(1,Math.round(img.width*scale));
-      c.height=Math.max(1,Math.round(img.height*scale));
-      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      resolve(c.toDataURL('image/jpeg',0.82));
-    };
-    img.src=src;
-  });
-}
-
-function groupForCandidate(id){
-  return prelimGroupsAdmin.findIndex(g=>g.includes(Number(id)));
-}
-
-function renderGroupUI(){
-  const tabs=document.getElementById('groupTabs');
-  const grid=document.getElementById('groupGrid');
-  const count=document.getElementById('groupCount');
-  if(!tabs||!grid||!count)return;
-
-  tabs.innerHTML=Array.from({length:25},(_,g)=>{
-    const n=prelimGroupsAdmin[g].length;
-    return `<button class="group-tab ${g===currentGroup?'active':''}" onclick="selectGroup(${g})">第${g+1}組<br>${n}/4</button>`;
-  }).join('');
-
-  const ids=prelimGroupsAdmin[currentGroup]||[];
-  count.textContent=`第${currentGroup+1}組：${ids.length}/4人`;
-
-  grid.innerHTML=ids.length ? ids.map(id=>{
-    const c=data.find(x=>x.id===Number(id));
-    if(!c)return '';
-    return `<div class="group-card">
-      <img src="${escapeAttr(c.image)}" alt="">
-      <div class="gname">${escapeHtml(c.group)}<strong>${escapeHtml(c.name)}</strong></div>
-      <button onclick="removeFromCurrentGroup(${c.id})">外す</button>
+      <select onchange="moveSlot(${i},this.value)">
+        <option value="">この人を別グループへ</option>
+        ${groups.map((_,gi)=>gi).filter(gi=>gi!==current)
+          .map(gi=>`<option value="${gi}">グループ${gi+1}へ</option>`).join("")}
+      </select>
+      <button class="danger" style="width:100%;margin-top:6px;padding:7px" onclick="removeFromGroup(${i})">外す</button>
     </div>`;
-  }).join('') : '<div class="muted" style="grid-column:1/-1">この組にはまだ候補者がいません。</div>';
-
-  renderCandidatePicker();
-  updateCandidateSelectors();
+  }).join("");
+  renderTabs();
 }
 
-function selectGroup(g){
-  currentGroup=g;
-  renderGroupUI();
-}
-
-function addCandidateToCurrentGroup(id){
-  id=Number(id);
-  const target=currentGroup;
-  const current=prelimGroupsAdmin[target];
-
-  if(current.includes(id))return;
-  if(current.length>=4){
-    alert(`第${target+1}組はすでに4人です。`);
-    return;
-  }
-
-  const old=groupForCandidate(id);
-  if(old>=0)prelimGroupsAdmin[old]=prelimGroupsAdmin[old].filter(x=>x!==id);
-  current.push(id);
-
-  persist();
-  renderGroupUI();
-}
-
-function removeFromCurrentGroup(id){
-  prelimGroupsAdmin[currentGroup]=prelimGroupsAdmin[currentGroup].filter(x=>x!==Number(id));
-  persist();
-  renderGroupUI();
-}
-
-function renderCandidatePicker(){
-  const box=document.getElementById('candidatePicker');
-  if(!box)return;
-  const q=(document.getElementById('candidateSearch').value||'').trim().toLowerCase();
-
-  const list=data.filter(c=>
-    !q ||
-    String(c.name).toLowerCase().includes(q) ||
-    String(c.group).toLowerCase().includes(q)
-  );
-
-  box.innerHTML=list.map(c=>{
-    const g=groupForCandidate(c.id);
-    const isCurrent=g===currentGroup;
-    const full=prelimGroupsAdmin[currentGroup].length>=4;
-    const label=isCurrent?'この組に追加済み':(g>=0?`第${g+1}組から移動`:'この組に追加');
-    return `<div class="picker-card">
-      <img src="${escapeAttr(c.image)}" alt="">
-      <div class="pinfo">
-        <strong>${escapeHtml(c.name)}</strong>
-        <span>${escapeHtml(c.group)}</span>
-        <span>${g>=0?`現在：第${g+1}組`:'未設定'}</span>
-      </div>
-      <div class="paction">
-        <button onclick="addCandidateToCurrentGroup(${c.id})" ${isCurrent||full?'disabled':''}>${label}</button>
-      </div>
-    </div>`;
-  }).join('') || '<div class="muted" style="grid-column:1/-1">該当する候補者がいません。</div>';
-}
-
-function updateCandidateSelectors(){
-  data.forEach((c,i)=>{
-    const st=document.getElementById('prelim-status-'+i);
-    const g=groupForCandidate(c.id);
-    if(st)st.textContent=g>=0?`予選：第${g+1}組`:'予選：未設定';
+function renderAll(){
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  const currentSet=new Set(groups[current]);
+  const arr=candidates.filter(c=>{
+    if(!q) return true;
+    return c.name.toLowerCase().includes(q) || c.group.toLowerCase().includes(q);
   });
+  document.getElementById("allGrid").innerHTML=arr.map(c=>{
+    const gi=groups.findIndex(g=>g.includes(c.id));
+    return `<div class="person">
+      <img src="${c.image}" alt="">
+      <div class="name">${esc(c.name)}</div>
+      <div class="meta">${esc(c.group)} / 現在: ${gi<0?"未配置":"組"+(gi+1)}</div>
+      <select onchange="movePerson(${c.id},this.value)">
+        <option value="">移動先を選択</option>
+        ${groups.map((_,i)=>`<option value="${i}" ${i===gi?"disabled":""}>組${i+1}${i===gi?"（現在）":""}</option>`).join("")}
+      </select>
+    </div>`;
+  }).join("");
+}
+
+function render(){
+  renderGroup();
+  renderAll();
+}
+
+function selectGroup(i){ current=i; render(); }
+
+function moveSlot(slotIndex,targetValue){
+  if(targetValue==="") return;
+  const target=Number(targetValue);
+  if(groups[target].length>=4){ setStatus("移動先が4人なので移動できません",false); render(); return; }
+  const [id]=groups[current].splice(slotIndex,1);
+  groups[target].push(id);
+  render();
+}
+
+function removeFromGroup(slotIndex){
+  if(groups[current].length<=1){setStatus("空のグループにはできません",false);return;}
+  const id=groups[current][slotIndex];
+  // 外すだけでは100人を維持できないため、削除ではなく未配置扱いにしない。
+  // 代わりに、現在グループから外したい場合は他グループへの移動を使う。
+  setStatus(`${byId.get(id).name}は「別グループへ」で移動してください`,false);
+}
+
+function movePerson(id,targetValue){
+  if(targetValue==="") return;
+  const target=Number(targetValue);
+  const from=groups.findIndex(g=>g.includes(id));
+  if(from<0){setStatus("所属グループが見つかりません",false);return;}
+  if(from===target){render();return;}
+  if(groups[target].length>=4){setStatus("移動先が4人なので移動できません",false);render();return;}
+  groups[from]=groups[from].filter(x=>x!==id);
+  groups[target].push(id);
+  render();
 }
 
 function saveGroups(){
-  syncNames();
-  if(!validGroups(prelimGroupsAdmin)){
-    const bad=prelimGroupsAdmin.findIndex(g=>g.length!==4);
-    if(bad>=0){
-      currentGroup=bad;
-      renderGroupUI();
-      alert(`第${bad+1}組が${prelimGroupsAdmin[bad].length}人です。全25組を4人ずつにしてください。`);
-    }else{
-      alert('100人全員を重複なく25組に分けてください。');
-    }
-    return;
-  }
-  if(persist())alert('予選グループを保存しました。好き顔9選の予選に反映されます。');
+  if(!validGroups(groups)){setStatus("25グループ・各4人・重複なしにしてください",false);return;}
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(groups));
+  setStatus("保存しました");
 }
 
 function resetGroups(){
-  if(!confirm('予選グループを登録順の4人ずつに戻しますか？'))return;
-  prelimGroupsAdmin=Array.from({length:25},(_,g)=>data.slice(g*4,g*4+4).map(c=>c.id));
-  currentGroup=0;
-  persist();
-  renderGroupUI();
+  if(!confirm("data.jsの初期グループに戻しますか？")) return;
+  groups=cloneGroups(INITIAL_GROUPS);
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+  setStatus("初期グループに戻しました");
 }
 
-function exportData(){
-  syncNames();
-  const payload={
-    version:'sukigao9-embedded-v1',
-    candidates:data,
-    prelimGroups:prelimGroupsAdmin
-  };
-  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
-  const a=document.createElement('a');
+function makeDataObject(){
+  return {candidates:BASE.candidates,prelimGroups:groups};
+}
+
+function download(name,text,type){
+  const blob=new Blob([text],{type});
+  const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download='sukigao9_data.json';
+  a.download=name;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
-function importData(e){
-  const file=e.target.files&&e.target.files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    try{
-      const raw=JSON.parse(reader.result);
-      const x=Array.isArray(raw)?raw:raw.candidates;
-      if(!Array.isArray(x)||x.length!==100)throw new Error('candidates');
-
-      data=cloneCandidates(x);
-
-      if(!Array.isArray(raw)){
-        prelimGroupsAdmin=Array.from({length:25},(_,g)=>data.slice(g*4,g*4+4).map(c=>c.id));
-      }else if(validGroups(raw.prelimGroups)){
-        prelimGroupsAdmin=raw.prelimGroups.map(g=>g.map(Number));
-      }else{
-        prelimGroupsAdmin=Array.from({length:25},(_,g)=>data.slice(g*4,g*4+4).map(c=>c.id));
-      }
-
-      if(!persist())throw new Error('save');
-      currentGroup=0;
-      renderCandidates();
-      renderGroupUI();
-      alert('データを読み込みました。');
-    }catch(err){
-      alert('正しい好き顔9選のデータファイルではありません。');
-    }finally{
-      e.target.value='';
-    }
-  };
-  reader.readAsText(file);
+function exportJson(){
+  download("sukigao9_data.json",JSON.stringify(makeDataObject()),"application/json");
 }
 
-renderCandidates();
-renderGroupUI();
+function exportDataJs(){
+  download("data.js","window.SUKIGAO9_DATA = "+JSON.stringify(makeDataObject())+";\n","text/javascript");
+}
+
+function importJson(){
+  document.getElementById("fileInput").click();
+}
+
+document.getElementById("fileInput").addEventListener("change",async e=>{
+  const f=e.target.files[0];
+  if(!f)return;
+  try{
+    const x=JSON.parse(await f.text());
+    if(!x || !validGroups(x.prelimGroups) || !Array.isArray(x.candidates) || x.candidates.length!==100){
+      throw new Error("形式が違います");
+    }
+    groups=x.prelimGroups.map(g=>g.map(Number));
+    render();
+    setStatus("読み込みました。保存を押すと反映されます");
+  }catch(err){
+    setStatus("読み込みに失敗しました",false);
+  }
+  e.target.value="";
+});
+
+document.getElementById("search").addEventListener("input",renderAll);
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+
+render();
 </script>
 </body>
 </html>
