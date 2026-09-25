@@ -99,11 +99,13 @@ function qualNext(){
 
 let battles=[], b=0, history=[];
 let score=new Map(), appearances=new Map(), historyLog=[];
+let rating=new Map();
 let targetMatches=180, exploreMatches=50;
 
 function initStats(){
   score=new Map(candidates.map(c=>[c.id,0]));
   appearances=new Map(candidates.map(c=>[c.id,0]));
+  rating=new Map(candidates.map(c=>[c.id,1000]));
   historyLog=[];
 }
 function groupMap(){
@@ -207,7 +209,23 @@ function renderBattle(){
     <button class="btn draw not-like" onclick="answer('neither')">どっちも好きじゃない</button>`;
   document.getElementById('battleBack').disabled=b===0;
 }
+function expectedScore(ra,rz){
+  return 1/(1+Math.pow(10,(rz-ra)/400));
+}
+function updateRating(a,z,type){
+  const ra=rating.get(a.id)||1000, rz=rating.get(z.id)||1000;
+  const ea=expectedScore(ra,rz), ez=1-ea;
+  const K=28;
+  let sa,sz;
+  if(type==='win'){sa=1;sz=0;}
+  else if(type==='lose'){sa=0;sz=1;}
+  else if(type==='both'){sa=0.5;sz=0.5;}
+  else {sa=0;sz=0;}
+  rating.set(a.id,ra+K*(sa-ea));
+  rating.set(z.id,rz+K*(sz-ez));
+}
 function applyResult(a,z,type){
+  // 元の点数も記録として残す。
   if(type==='win'){
     score.set(a.id,(score.get(a.id)||0)+2);score.set(z.id,(score.get(z.id)||0)-1);
   }else if(type==='lose'){
@@ -219,6 +237,7 @@ function applyResult(a,z,type){
   }
   appearances.set(a.id,(appearances.get(a.id)||0)+1);
   appearances.set(z.id,(appearances.get(z.id)||0)+1);
+  updateRating(a,z,type);
 }
 function answer(type,id){
   const [a,z]=battles[b];
@@ -232,15 +251,15 @@ function answer(type,id){
 function battleBack(){
   if(b===0)return;
   b--;
-  const h=historyLog.pop();
-  if(h){
+  historyLog.pop();
+
+  // 現在位置までの履歴から、レーティングを完全に再計算する。
+  initStats();
+  for(const h of historyLog){
     const a=candidates.find(c=>c.id===h.a),z=candidates.find(c=>c.id===h.z);
-    if(h.type==='win'){score.set(a.id,score.get(a.id)-2);score.set(z.id,score.get(z.id)+1);}
-    else if(h.type==='lose'){score.set(a.id,score.get(a.id)+1);score.set(z.id,score.get(z.id)-2);}
-    else if(h.type==='both'){score.set(a.id,score.get(a.id)-1);score.set(z.id,score.get(z.id)-1);}
-    else if(h.type==='neither'){score.set(a.id,score.get(a.id)+1);score.set(z.id,score.get(z.id)+1);}
-    appearances.set(a.id,appearances.get(a.id)-1);appearances.set(z.id,appearances.get(z.id)-1);
+    if(a&&z)applyResult(a,z,h.type);
   }
+
   battles=battles.slice(0,b+1);
   renderBattle();
 }
@@ -256,6 +275,16 @@ function finishBattle(){
   document.getElementById('ranking').innerHTML=ranked.map((c,i)=>`
     <div class="card"><img src="${c.image}" alt=""><div class="place">${i+1}位</div><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
   document.querySelector('#result .muted').textContent=`比較回数 ${historyLog.length}回。予選での選択と本戦での評価をもとに、好き度を集計しています。`;
+  let shareBtn=document.getElementById('shareResultX');
+  if(!shareBtn){
+    shareBtn=document.createElement('button');
+    shareBtn.id='shareResultX';
+    shareBtn.className='btn';
+    shareBtn.textContent='結果画像をXに投稿';
+    shareBtn.onclick=shareResultOnX;
+    const restart=document.querySelector('#result button.btn');
+    restart.parentNode.insertBefore(shareBtn,restart);
+  }
   show('result');
 }
 function escapeHtml(s){
