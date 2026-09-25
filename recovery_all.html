@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>好き顔9選 データ復旧チェック</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f5f5f5;color:#222}
+main{max-width:760px;margin:0 auto;padding:20px}
+h1{font-size:22px;margin:0 0 10px}.note{background:#fff;padding:14px;border-radius:10px;margin:12px 0;line-height:1.6}
+button{font-size:16px;padding:12px 16px;border:0;border-radius:8px;background:#111;color:#fff;margin:6px 6px 6px 0}
+pre{white-space:pre-wrap;word-break:break-all;background:#111;color:#eee;padding:14px;border-radius:10px;font-size:12px;max-height:55vh;overflow:auto}
+.ok{color:#087f23;font-weight:700}.warn{color:#b35a00;font-weight:700}
+</style>
+</head>
+<body>
+<main>
+<h1>好き顔9選 データ復旧チェック</h1>
+<div class="note">
+このページは、このサイトのSafari内に残っている保存データを確認するだけです。<br>
+サーバーへデータを送信しません。
+</div>
+<button onclick="scan()">保存データを調べる</button>
+<button onclick="downloadAll()">全データを書き出す</button>
+<div id="status" class="note">まだ調べていません。</div>
+<pre id="out">—</pre>
+<script>
+function safeStore(store){
+  const out={};
+  try{
+    for(let i=0;i<store.length;i++){
+      const k=store.key(i); out[k]=store.getItem(k);
+    }
+  }catch(e){ out.__error=String(e); }
+  return out;
+}
+async function getIDB(){
+  const result={supported:!!(indexedDB&&indexedDB.databases),databases:[]};
+  if(!result.supported) return result;
+  try{ result.databases=await indexedDB.databases(); }catch(e){result.error=String(e)}
+  return result;
+}
+async function scan(){
+  const local=safeStore(localStorage), session=safeStore(sessionStorage), idb=await getIDB();
+  const keys=Object.keys(local);
+  const likely=keys.filter(k=>/suki|candidate|group|member|data|json/i.test(k));
+  let html='';
+  if(local.sukigao9_candidates){
+    try{const a=JSON.parse(local.sukigao9_candidates); html+='\n【sukigao9_candidates】 '+(Array.isArray(a)?a.length+'件':'配列ではありません');}catch(e){html+='\n【sukigao9_candidates】 JSON解析不可';}
+  }
+  if(local.sukigao9_prelim_groups){
+    try{const a=JSON.parse(local.sukigao9_prelim_groups); html+='\n【sukigao9_prelim_groups】 保存あり';}catch(e){html+='\n【sukigao9_prelim_groups】 JSON解析不可';}
+  }
+  document.getElementById('status').innerHTML = likely.length ? '<span class="ok">候補になりそうな保存キーが見つかりました。</span>' : '<span class="warn">候補になりそうな保存キーは見つかりませんでした。</span>';
+  const summary={
+    url:location.origin,
+    localStorage_keys:Object.keys(local),
+    likely_keys:likely,
+    localStorage_lengths:Object.fromEntries(Object.entries(local).map(([k,v])=>[k,v?.length||0])),
+    sessionStorage_keys:Object.keys(session),
+    indexedDB:idb,
+    detail:html.trim()
+  };
+  document.getElementById('status').innerHTML = likely.length ? '<span class="ok">候補になりそうな保存キーが見つかりました。</span>' : '<span class="warn">候補になりそうな保存キーは見つかりませんでした。</span>';
+  document.getElementById('out').textContent=JSON.stringify(summary,null,2);
+  window.__all={localStorage:local,sessionStorage:session,indexedDB:idb,summary};
+}
+async function downloadAll(){
+  if(!window.__all) await scan();
+  const blob=new Blob([JSON.stringify(window.__all,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sukigao9_storage_backup.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+scan();
+</script>
+</main>
+</body>
+</html>
