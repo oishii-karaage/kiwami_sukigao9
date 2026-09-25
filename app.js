@@ -189,16 +189,8 @@ function startBattle(){
   targetMatches=clamp(140+p*2,150,240);
   exploreMatches=clamp(35+Math.round(p*0.6),40,75);
 
-  // 全対戦順を最初に確定。以後、戻っても同じ順番を使用する。
-  for(let i=0;i<targetMatches;i++){
-    const stage=i<exploreMatches?1:(i<Math.floor(targetMatches*0.72)?2:3);
-    const pair=choosePair(stage);
-    if(!pair)break;
-    battles.push(pair.map(id=>candidates.find(c=>c.id===id)));
-    usedPairKeys.add(pairKey(pair[0],pair[1]));
-  }
-
-  targetMatches=battles.length;
+  // 対戦順は「表示する直前」に現在の回答状況を見て生成する。
+  // 一度生成したペアは battles に保持するので、戻っても同じペアになる。
   renderBattle();
   show('battle');
 }
@@ -210,17 +202,24 @@ function currentStage(){
 }
 
 function nextBattlePair(){
-  // 新規生成はstartBattle()で完了済み。
-  return battles[b]||null;
+  const pair=choosePair(currentStage());
+  if(!pair)return null;
+  const cards=pair.map(id=>candidates.find(c=>c.id===id)).filter(Boolean);
+  if(cards.length!==2)return null;
+  battles[b]=cards;
+  usedPairKeys.add(pairKey(pair[0],pair[1]));
+  return cards;
 }
 
 function renderBattle(){
-  if(b>=battles.length){
+  if(b>=targetMatches){
     finishBattle();
     return;
   }
 
-  const pair=battles[b];
+  // まだ一度も表示していない位置だけ新しいペアを生成する。
+  // 戻る→進む場合は、既に保存された battles[b] をそのまま使う。
+  const pair=battles[b]||nextBattlePair();
   if(!pair){
     finishBattle();
     return;
@@ -228,7 +227,7 @@ function renderBattle(){
 
   const [a,z]=pair;
   document.getElementById('battleBar').style.width=
-    `${battles.length ? (b/battles.length)*100 : 100}%`;
+    `${targetMatches ? (b/targetMatches)*100 : 100}%`;
 
   document.getElementById('duel').innerHTML=[a,z].map(c=>`
     <div class="card" onclick="answer('win',${c.id})">
@@ -279,7 +278,7 @@ function applyResult(a,z,type){
 }
 
 function answer(type,id){
-  if(b>=battles.length)return;
+  if(b>=targetMatches)return;
 
   const pair=battles[b];
   if(!pair)return;
@@ -292,8 +291,8 @@ function answer(type,id){
   historyLog.push({b,a:a.id,z:z.id,type:t});
   b++;
 
-  // 最後の比較を選んだ瞬間に確実に結果へ。
-  if(b>=battles.length){
+  // targetMatches回目の回答を選択した直後に結果画面へ。
+  if(b>=targetMatches){
     finishBattle();
     return;
   }
@@ -303,18 +302,21 @@ function answer(type,id){
 function battleBack(){
   if(b===0)return;
 
+  // 直前の回答だけ取り消す。battles と usedPairKeys は残すので、
+  // 戻ってから進んでも同じペアが表示される。
   b--;
   historyLog.pop();
 
-  // 現在位置までの回答を使って完全に再計算。
+  // historyLogを退避してから統計を初期化し、ここまでの回答を再適用する。
+  const savedHistory=historyLog.slice();
   initStats();
-  for(const h of historyLog){
+  for(const h of savedHistory){
     const a=candidates.find(c=>c.id===h.a);
     const z=candidates.find(c=>c.id===h.z);
     if(a&&z)applyResult(a,z,h.type);
   }
+  historyLog=savedHistory;
 
-  // battles自体は削除しないので、戻って進んでも同じペア。
   renderBattle();
 }
 
