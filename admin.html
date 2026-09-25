@@ -98,8 +98,10 @@ small{color:#777}
 </div>
 </main>
 
+<script src="data.js"></script>
 <script>
 const KEY='sukigao9_candidates';
+const GROUP_KEY='sukigao9_prelim_groups';
 const defaults=Array.from({length:100},(_,i)=>({
   id:i+1,
   group:'', name:`候補者 ${String(i+1).padStart(3,'0')}`,
@@ -110,11 +112,11 @@ let data=load();
 function load(){
   try{
     const raw=localStorage.getItem(KEY);
-    if(!raw)return structuredClone(defaults);
+    if(!raw){localStorage.setItem(KEY,JSON.stringify(defaults));return structuredClone(defaults);}
     const x=JSON.parse(raw);
-    if(!Array.isArray(x)||x.length!==100)return structuredClone(defaults);
+    if(!Array.isArray(x)||x.length!==100||isPlaceholderData(x)){localStorage.setItem(KEY,JSON.stringify(defaults));return structuredClone(defaults);}
     return x;
-  }catch(e){return structuredClone(defaults)}
+  }catch(e){localStorage.setItem(KEY,JSON.stringify(defaults));return structuredClone(defaults)}
 }
 function render(){
   document.getElementById('slots').innerHTML=data.map((c,i)=>`
@@ -195,7 +197,7 @@ function saveAll(){
 }
 function exportData(){
   syncNames();
-  const payload={candidates:data,prelimGroups:prelimGroupsAdmin};
+  const payload={version:'sukigao9-embedded-v1',candidates:data,prelimGroups:prelimGroupsAdmin};
   const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -226,18 +228,17 @@ function importData(e){
   reader.readAsText(file);
 }
 
-const GROUP_KEY='sukigao9_prelim_groups';
 let prelimGroupsAdmin=loadGroupsAdmin();
 let currentGroup=0;
 
 function loadGroupsAdmin(){
   try{
     const raw=localStorage.getItem(GROUP_KEY);
-    if(!raw) return Array.from({length:25},()=>[]);
+    if(!raw){ localStorage.setItem(GROUP_KEY,JSON.stringify(embeddedGroups)); return embeddedGroups.map(g=>g.slice()); }
     const x=JSON.parse(raw);
-    if(!Array.isArray(x)||x.length!==25) return Array.from({length:25},()=>[]);
+    if(!Array.isArray(x)||x.length!==25||x.some(g=>!Array.isArray(g)||g.length!==4)){ localStorage.setItem(GROUP_KEY,JSON.stringify(embeddedGroups)); return embeddedGroups.map(g=>g.slice()); }
     return x.map(g=>Array.isArray(g)?g.map(Number).filter(Boolean):[]);
-  }catch(e){return Array.from({length:25},()=>[])}
+  }catch(e){localStorage.setItem(GROUP_KEY,JSON.stringify(embeddedGroups)); return embeddedGroups.map(g=>g.slice())}
 }
 function groupForCandidate(id){
   return prelimGroupsAdmin.findIndex(g=>g.includes(id));

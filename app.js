@@ -1,21 +1,38 @@
-const DEFAULT_CANDIDATES = Array.from({length:100},(_,i)=>({
+const EMBEDDED_DATA = (window.SUKIGAO9_DATA && Array.isArray(window.SUKIGAO9_DATA.candidates)) ? window.SUKIGAO9_DATA : {candidates:[],prelimGroups:[]};
+const DEFAULT_CANDIDATES = EMBEDDED_DATA.candidates.length===100 ? EMBEDDED_DATA.candidates : Array.from({length:100},(_,i)=>({
   id:i+1,
   group:'', name:`候補者 ${String(i+1).padStart(3,'0')}`,
   image:`https://picsum.photos/seed/sukigao${i+1}/500/500`
 }));
+const DEFAULT_GROUPS = Array.isArray(EMBEDDED_DATA.prelimGroups) && EMBEDDED_DATA.prelimGroups.length===25
+  ? EMBEDDED_DATA.prelimGroups : Array.from({length:25},(_,g)=>DEFAULT_CANDIDATES.slice(g*4,g*4+4).map(c=>c.id));
 
+function isPlaceholderData(saved){
+  if(!Array.isArray(saved) || saved.length!==100 || DEFAULT_CANDIDATES.length!==100) return false;
+  const placeholderCount=saved.filter(c=>/^候補者\s*\d{3}$/.test(String(c?.name||''))).length;
+  return placeholderCount>=90;
+}
 function loadCandidates(){
   try{
     const raw=localStorage.getItem('sukigao9_candidates');
-    if(!raw) return DEFAULT_CANDIDATES;
+    if(!raw){
+      localStorage.setItem('sukigao9_candidates',JSON.stringify(DEFAULT_CANDIDATES));
+      return DEFAULT_CANDIDATES;
+    }
     const saved=JSON.parse(raw);
-    if(!Array.isArray(saved) || saved.length!==100) return DEFAULT_CANDIDATES;
+    if(!Array.isArray(saved) || saved.length!==100 || isPlaceholderData(saved)){
+      localStorage.setItem('sukigao9_candidates',JSON.stringify(DEFAULT_CANDIDATES));
+      return DEFAULT_CANDIDATES;
+    }
     return saved.map((c,i)=>({
       id:i+1,
-      group:(c.group||'').trim(), name:(c.name||`候補者 ${String(i+1).padStart(3,'0')}`).trim(),
+      group:(c.group||'').trim(), name:(c.name||DEFAULT_CANDIDATES[i].name).trim(),
       image:c.image||DEFAULT_CANDIDATES[i].image
     }));
-  }catch(e){ return DEFAULT_CANDIDATES; }
+  }catch(e){
+    try{localStorage.setItem('sukigao9_candidates',JSON.stringify(DEFAULT_CANDIDATES));}catch(_){}
+    return DEFAULT_CANDIDATES;
+  }
 }
 
 const candidates = loadCandidates();
@@ -25,9 +42,15 @@ const prelimGroups = loadPrelimGroups();
 function loadPrelimGroups(){
   try{
     const raw=localStorage.getItem('sukigao9_prelim_groups');
-    if(!raw)return null;
+    if(!raw){
+      localStorage.setItem('sukigao9_prelim_groups',JSON.stringify(DEFAULT_GROUPS));
+      return DEFAULT_GROUPS;
+    }
     const x=JSON.parse(raw);
-    if(!Array.isArray(x)||x.length!==25||x.some(g=>!Array.isArray(g)||g.length!==4))return null;
+    if(!Array.isArray(x)||x.length!==25||x.some(g=>!Array.isArray(g)||g.length!==4)){
+      localStorage.setItem('sukigao9_prelim_groups',JSON.stringify(DEFAULT_GROUPS));
+      return DEFAULT_GROUPS;
+    }
     const ids=x.flat();
     if(ids.length!==100||new Set(ids).size!==100)return null;
     const valid=new Set(candidates.map(c=>c.id));
@@ -185,9 +208,7 @@ function renderBattle(){
     if(!pair){finishBattle();return;}
   }
   const [a,z]=battles[b];
-  const stage=currentStage();
-  const label=stage===1 ? `発掘 ${b+1} / ${exploreMatches}` : stage===2 ? `本戦 ${b+1} / ${targetMatches}` : `順位調整 ${b+1} / ${targetMatches}`;
-  document.getElementById('battleInfo').textContent=label;
+  document.getElementById('battleInfo').textContent='';
   document.getElementById('battleBar').style.width=`${(b/targetMatches)*100}%`;
   document.getElementById('duel').innerHTML=[a,z].map(c=>`
     <div class="card" onclick="answer('win',${c.id})"><img src="${c.image}" alt=""><div class="group">${escapeHtml(c.group||"")}</div><div class="name">${escapeHtml(c.name)}</div></div>`).join('');
